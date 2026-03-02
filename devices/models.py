@@ -1,4 +1,6 @@
 # devices/models.py
+from datetime import timedelta
+
 from django.db import models
 import qrcode
 from io import BytesIO
@@ -99,10 +101,10 @@ class Device(models.Model):
     
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        
+
         if not self.qr_code:
             self.generate_qr_code()
-            super().save(*args, **kwargs)
+            super().save(update_fields=['qr_code'])
 
 class Maintenance(models.Model):
     MAINTENANCE_TYPE = [
@@ -130,3 +132,94 @@ class Maintenance(models.Model):
     
     def __str__(self):
         return f"Maintenance {self.device.name} - {self.date}"
+
+
+class PMTemplate(models.Model):
+    """Recurring preventive-maintenance template matched by device attributes."""
+
+    MAINTENANCE_TYPE = Maintenance.MAINTENANCE_TYPE
+
+    name = models.CharField(max_length=200)
+    maintenance_type = models.CharField(max_length=20, choices=MAINTENANCE_TYPE, default='preventive')
+    device_type = models.CharField(max_length=50, choices=Device.DEVICE_TYPE)
+    manufacturer = models.CharField(max_length=200, blank=True)
+    model = models.CharField(max_length=200, blank=True)
+    interval_days = models.PositiveIntegerField(default=90)
+    reminder_days_before = models.PositiveIntegerField(default=7)
+    is_active = models.BooleanField(default=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['device_type', 'manufacturer', 'model', 'name']
+
+    def __str__(self):
+        target = f"{self.get_device_type_display()}"
+        if self.manufacturer:
+            target += f" / {self.manufacturer}"
+        if self.model:
+            target += f" / {self.model}"
+        return f"{self.name} ({target})"
+
+
+class MaintenanceTask(models.Model):
+    """Auto-generated PM task from template/device pair."""
+
+    STATUS_CHOICES = [
+        ('scheduled', 'Scheduled'),
+        ('due', 'Due Now'),
+        ('overdue', 'Overdue'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    URGENCY_CHOICES = [
+        ('normal', 'Normal'),
+        ('soon', 'Due Soon'),
+        ('urgent', 'Urgent'),
+        ('overdue', 'Overdue'),
+    ]
+
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='maintenance_tasks')
+    template = models.ForeignKey(PMTemplate, on_delete=models.CASCADE, related_name='maintenance_tasks')
+    due_date = models.DateField()
+    reminder_date = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='normal')
+    source_maintenance = models.ForeignKey(Maintenance, on_delete=models.SET_NULL, null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['due_date', 'urgency']
+        unique_together = ('device', 'template', 'due_date')
+
+    def __str__(self):
+        return f"{self.device.device_id} / {self.template.name} / {self.due_date}"
+
+    def refresh_status(self, reference_date=None):
+        if self.status in {'completed', 'cancelled'}:
+            return
+
+        reference_date = reference_date or timezone.now().date()
+        days = (self.due_date - reference_date).days
+
+        if days < 0:
+            self.status = 'overdue'
+            self.urgency = 'overdue'
+        elif days <= 3:
+            self.status = 'due'
+            self.urgency = 'urgent'
+        elif days <= 7:
+            self.status = 'scheduled'
+            self.urgency = 'soon'
+        else:
+            self.status = 'scheduled'
+            self.urgency = 'normal'
+
+    @property
+    def next_due_date(self):
+        return self.due_date + timedelta(days=self.template.interval_days)
