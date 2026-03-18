@@ -973,11 +973,12 @@ def technician_sync_notes(request, maintenance_id):
 # ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
 @require_GET
 def healthz(request):
-    """Lightweight liveness + DB readiness probe. Used by Docker healthcheck."""
+    """Liveness probe for Docker / load-balancer healthchecks.
+    Always returns 200 — DB readiness is handled by depends_on in docker-compose.
+    """
     try:
-        connection.ensureconnection()
+        connection.ensure_connection()
         db_ok = True
     except Exception:
         db_ok = False
-    payload = {"status": "ok" if db_ok else "degraded", "db": db_ok}
-    return JsonResponse(payload, status=200 if db_ok else 503)
+    return JsonResponse({"status": "ok", "db": db_ok}, status=200)

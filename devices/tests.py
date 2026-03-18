@@ -329,10 +329,9 @@ class AuthenticatedViewTests(TestCase):
         from django.test import override_settings
         with override_settings(ALLOWED_HOSTS=['*']):
             r = Client().get('/healthz/')
-        self.assertIn(r.status_code, [200, 503])
+        self.assertEqual(r.status_code, 200)
         data = r.json()
-        self.assertIn('status', data)
-        self.assertIn(data['status'], ['ok', 'degraded'])
+        self.assertEqual(data['status'], 'ok')
 
     def test_control_center_returns_200(self):
         r = self.client.get(reverse('control_center'))
