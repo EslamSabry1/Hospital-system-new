@@ -11,7 +11,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-hospital_user}"]
+      # Pass -d explicitly — without it pg_isready tries DB named after the user
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-hospital_user} -d ${DB_NAME:-hospital_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +27,8 @@ services:
                --workers 2
                --bind 0.0.0.0:8000
                --timeout 120
-               --access-logfile -"
+               --access-logfile -
+               --error-logfile -"
     ports:
       - "8000:8000"
     volumes:
@@ -36,15 +38,20 @@ services:
       - .env
     environment:
       - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME:-hospital_db}
+      - DB_USER=${DB_USER:-hospital_user}
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - DB_HOST=db
+      - DB_PORT=5432
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/healthz/ || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/healthz/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
 volumes:
   postgres_data:
