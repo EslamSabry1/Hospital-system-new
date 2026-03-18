@@ -1,29 +1,338 @@
 {% extends 'base.html' %}
-{% block title %}Technician Mobile Workbench{% endblock %}
+{% load i18n %}
+{% block title %}Technician Workbench — DeviceCare{% endblock %}
+
+{% block extra_css %}
+<style>
+.wb-page { min-height: calc(100vh - 80px); padding-bottom: 5rem; }
+
+.wb-hero {
+  background: linear-gradient(135deg, #032541 0%, #0369a1 60%, #0ea5e9 100%);
+  padding: 2rem 1.25rem 3.5rem;
+  position: relative; overflow: hidden;
+}
+.wb-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 80% 20%, rgba(14,165,233,.30) 0%, transparent 55%),
+              radial-gradient(circle at 10% 90%, rgba(6,182,212,.20) 0%, transparent 45%);
+  pointer-events: none;
+}
+.wb-hero::after {
+  content: ''; position: absolute;
+  bottom: -1px; left: 0; right: 0; height: 40px;
+  background: var(--bg-primary, #f0f9ff);
+  clip-path: ellipse(55% 100% at 50% 100%);
+}
+[data-bs-theme="dark"] .wb-hero::after { background: var(--bg-primary, #020617); }
+.wb-hero-inner { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; }
+
+.wb-badge {
+  display: inline-flex; align-items: center; gap: .45rem;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+  color: #e0f2fe; font-size: .75rem; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  padding: .35rem .85rem; border-radius: 999px; margin-bottom: 1rem;
+}
+.wb-hero h1 {
+  font-size: clamp(1.5rem, 5vw, 2rem); font-weight: 800;
+  color: #fff; letter-spacing: -.02em; margin-bottom: .4rem; line-height: 1.15;
+}
+.wb-hero p { color: rgba(224,242,254,.85); font-size: .9rem; margin: 0; }
+
+.wb-user-chip {
+  display: inline-flex; align-items: center; gap: .5rem;
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+  color: #fff; padding: .4rem .9rem .4rem .4rem;
+  border-radius: 999px; font-size: .82rem; font-weight: 600;
+  margin-top: 1.25rem;
+}
+.wb-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .75rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+
+.wb-content { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem 0; }
+
+.wb-scan-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, rgba(14,116,144,.14));
+  border-radius: 20px; padding: 1.5rem;
+  box-shadow: var(--shadow-soft, 0 10px 30px rgba(2,132,199,.14));
+  margin-bottom: 1.5rem;
+}
+.wb-scan-label {
+  font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--app-primary, #0369a1); margin-bottom: 1rem;
+  display: flex; align-items: center; gap: .4rem;
+}
+.wb-input-group { display: flex; gap: .75rem; align-items: stretch; }
+.wb-device-input {
+  flex: 1; border: 1.5px solid var(--border-color, rgba(14,116,144,.2));
+  border-radius: 12px; padding: .85rem 1rem;
+  font-size: 1rem; font-weight: 500;
+  background: var(--bg-primary, #f0f9ff);
+  color: var(--text-primary, #0f172a);
+  outline: none; transition: border-color 220ms, box-shadow 220ms;
+  font-family: 'JetBrains Mono', monospace;
+}
+.wb-device-input::placeholder { color: var(--text-secondary, #64748b); font-family: 'Poppins', sans-serif; font-weight: 400; }
+.wb-device-input:focus {
+  border-color: var(--app-primary, #0369a1);
+  box-shadow: 0 0 0 3px rgba(3,105,161,.12);
+  background: var(--bg-surface, #fff);
+}
+.wb-scan-btn {
+  background: linear-gradient(135deg, var(--app-primary,#0369a1), var(--app-secondary,#0ea5e9));
+  color: #fff; border: none; border-radius: 12px;
+  padding: .85rem 1.25rem; font-size: .9rem; font-weight: 700;
+  cursor: pointer; transition: all 220ms;
+  display: flex; align-items: center; gap: .5rem;
+  white-space: nowrap; min-width: 120px; justify-content: center;
+}
+.wb-scan-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(3,105,161,.35); }
+.wb-hint { font-size: .78rem; color: var(--text-secondary, #64748b); margin-top: .65rem; display: flex; align-items: center; gap: .35rem; }
+
+.wb-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; margin-bottom: 1.5rem; }
+.wb-stat {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, rgba(14,116,144,.14));
+  border-radius: 14px; padding: 1rem .75rem; text-align: center;
+}
+.wb-stat-num { font-size: 1.6rem; font-weight: 800; color: var(--app-primary, #0369a1); line-height: 1; margin-bottom: .2rem; }
+.wb-stat-num.warn   { color: var(--app-warning, #d97706); }
+.wb-stat-num.danger { color: var(--app-danger,  #dc2626); }
+.wb-stat-label { font-size: .68rem; font-weight: 600; color: var(--text-secondary, #64748b); text-transform: uppercase; letter-spacing: .06em; line-height: 1.2; }
+
+.wb-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.wb-section-title { font-size: .78rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--text-secondary, #334155); display: flex; align-items: center; gap: .45rem; }
+.wb-section-title i { color: var(--app-primary, #0369a1); }
+.wb-count-pill { background: var(--app-primary, #0369a1); color: #fff; font-size: .7rem; font-weight: 800; padding: .15rem .55rem; border-radius: 999px; }
+
+.wb-wo-list { display: flex; flex-direction: column; gap: .75rem; }
+.wb-wo-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, rgba(14,116,144,.14));
+  border-radius: 16px; padding: 1rem 1.1rem;
+  display: flex; align-items: center; gap: 1rem;
+  text-decoration: none; transition: all 220ms;
+  position: relative; overflow: hidden;
+}
+.wb-wo-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 4px 0 0 4px; }
+.wb-wo-card.priority-emergency::before  { background: #dc2626; }
+.wb-wo-card.priority-corrective::before { background: #d97706; }
+.wb-wo-card.priority-preventive::before { background: #059669; }
+.wb-wo-card.priority-calibration::before{ background: #2563eb; }
+.wb-wo-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(2,132,199,.14); border-color: var(--app-secondary, #0ea5e9); text-decoration: none; }
+
+.wb-wo-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+.icon-emergency  { background: rgba(220,38,38,.12);  color: #dc2626; }
+.icon-corrective { background: rgba(217,119,6,.12);  color: #d97706; }
+.icon-preventive { background: rgba(5,150,105,.12);  color: #059669; }
+.icon-calibration{ background: rgba(37,99,235,.12);  color: #2563eb; }
+
+.wb-wo-body { flex: 1; min-width: 0; }
+.wb-wo-name { font-size: .95rem; font-weight: 700; color: var(--text-primary, #0f172a); margin: 0 0 .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wb-wo-meta { display: flex; flex-wrap: wrap; gap: .35rem .65rem; font-size: .76rem; color: var(--text-secondary, #64748b); }
+.wb-wo-meta span { display: flex; align-items: center; gap: .25rem; }
+
+.wb-status-badge { display: inline-flex; align-items: center; gap: .3rem; font-size: .7rem; font-weight: 700; padding: .25rem .6rem; border-radius: 999px; white-space: nowrap; }
+.status-in-progress { background: rgba(217,119,6,.12);  color: #92400e; }
+.status-assigned    { background: rgba(37,99,235,.12);  color: #1e3a8a; }
+.status-new         { background: rgba(100,116,139,.12); color: #374151; }
+.status-waiting     { background: rgba(139,92,246,.12); color: #4c1d95; }
+[data-bs-theme="dark"] .status-in-progress { color: #fde68a; }
+[data-bs-theme="dark"] .status-assigned    { color: #bfdbfe; }
+[data-bs-theme="dark"] .status-new         { color: #d1d5db; }
+[data-bs-theme="dark"] .status-waiting     { color: #ddd6fe; }
+
+.wb-sla-badge {
+  background: rgba(220,38,38,.1); color: #991b1b;
+  border: 1px solid rgba(220,38,38,.2);
+  font-size: .65rem; font-weight: 700; padding: .15rem .45rem;
+  border-radius: 4px; display: inline-flex; align-items: center; gap: .2rem;
+}
+[data-bs-theme="dark"] .wb-sla-badge { color: #fca5a5; }
+.wb-wo-arrow { color: var(--text-secondary, #64748b); font-size: .9rem; flex-shrink: 0; transition: transform 220ms, color 220ms; }
+.wb-wo-card:hover .wb-wo-arrow { color: var(--app-primary, #0369a1); transform: translateX(3px); }
+
+.wb-empty { background: var(--bg-surface, #fff); border: 1px dashed var(--border-color, rgba(14,116,144,.25)); border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; }
+.wb-empty-icon { width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, rgba(3,105,161,.08), rgba(6,182,212,.06)); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--app-primary, #0369a1); margin: 0 auto 1rem; }
+.wb-empty h6 { font-weight: 700; color: var(--text-primary, #0f172a); margin-bottom: .35rem; }
+.wb-empty p  { font-size: .85rem; color: var(--text-secondary, #64748b); margin: 0; }
+
+.wb-bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--bg-surface, #fff);
+  border-top: 1px solid var(--border-color, rgba(14,116,144,.14));
+  padding: .75rem 1rem; display: flex; justify-content: space-around;
+  z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+}
+.wb-bottom-btn {
+  display: flex; flex-direction: column; align-items: center; gap: .25rem;
+  font-size: .65rem; font-weight: 600; color: var(--text-secondary, #64748b);
+  text-decoration: none; padding: .4rem .75rem;
+  border-radius: 10px; transition: all 220ms;
+  background: none; border: none; cursor: pointer;
+}
+.wb-bottom-btn i { font-size: 1.2rem; }
+.wb-bottom-btn:hover, .wb-bottom-btn.active { color: var(--app-primary, #0369a1); background: rgba(3,105,161,.08); }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.wb-scan-card { animation: slideUp .35s ease both; }
+.wb-stats     { animation: slideUp .40s ease both .05s; }
+.wb-wo-card:nth-child(1) { animation: slideUp .35s ease both .10s; }
+.wb-wo-card:nth-child(2) { animation: slideUp .35s ease both .15s; }
+.wb-wo-card:nth-child(3) { animation: slideUp .35s ease both .20s; }
+.wb-wo-card:nth-child(4) { animation: slideUp .35s ease both .25s; }
+.wb-wo-card:nth-child(5) { animation: slideUp .35s ease both .30s; }
+
+@media (min-width: 640px) {
+  .wb-hero    { padding: 2.5rem 2rem 4rem; }
+  .wb-content { padding: 2rem 1.5rem 0; }
+  .wb-bottom-bar { display: none !important; }
+  .wb-page    { padding-bottom: 2rem; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<h3>Technician Mobile-first Workflow</h3>
-<div class="card p-3 mb-3">
-  <form method="get" action="{% url 'technician_device_from_qr' %}" class="row g-2 align-items-end">
-    <div class="col-md-8">
-      <label class="form-label">Scan QR (or paste Device ID)</label>
-      <input type="text" name="device_id" class="form-control" placeholder="e.g. MON-100" required>
+<div class="wb-page">
+
+  <div class="wb-hero">
+    <div class="wb-hero-inner">
+      <div class="wb-badge"><i class="bi bi-tools"></i> Field Operations</div>
+      <h1>Technician Workbench</h1>
+      <p>Scan a device, manage work orders, and sync field notes — all from your phone.</p>
+      <div class="wb-user-chip">
+        <div class="wb-avatar">
+          {{ user.username|first|upper }}{% if user.last_name %}{{ user.last_name|first|upper }}{% else %}{{ user.username|slice:"1:2"|upper }}{% endif %}
+        </div>
+        <span>{{ user.get_full_name|default:user.username }}</span>
+        <i class="bi bi-circle-fill text-success ms-1" style="font-size:.45rem"></i>
+        <span style="font-size:.72rem;opacity:.75">Online</span>
+      </div>
     </div>
-    <div class="col-md-4">
-      <button class="btn btn-primary w-100">Open Device</button>
+  </div>
+
+  <div class="wb-content">
+
+    <!-- Device Search / QR -->
+    <div class="wb-scan-card">
+      <div class="wb-scan-label"><i class="bi bi-qr-code-scan"></i> Scan or Enter Device ID</div>
+      <form method="get" action="{% url 'technician_device_from_qr' %}">
+        <div class="wb-input-group">
+          <input type="text" name="device_id" class="wb-device-input"
+            placeholder="e.g. MON-100" autocomplete="off"
+            autocapitalize="characters" spellcheck="false" required autofocus>
+          <button type="submit" class="wb-scan-btn">
+            <i class="bi bi-arrow-right-circle-fill"></i> Open
+          </button>
+        </div>
+        <p class="wb-hint">
+          <i class="bi bi-info-circle"></i>
+          Point your camera at a device QR code, or type the Device ID manually.
+        </p>
+      </form>
     </div>
-  </form>
-</div>
-<div class="card p-3">
-  <h5>Open Work Orders</h5>
-  <ul class="list-group list-group-flush">
-    {% for wo in open_work_orders %}
-      <li class="list-group-item d-flex justify-content-between">
-        <span>#{{ wo.id }} - {{ wo.device.name }} ({{ wo.get_status_display }})</span>
-        <a href="{% url 'technician_device' wo.device.pk %}" class="btn btn-sm btn-outline-primary">Open</a>
-      </li>
-    {% empty %}
-      <li class="list-group-item text-muted">No open work orders.</li>
-    {% endfor %}
-  </ul>
+
+    <!-- Quick Stats -->
+    <div class="wb-stats">
+      <div class="wb-stat">
+        <div class="wb-stat-num {% if open_work_orders|length > 5 %}warn{% endif %}">
+          {{ open_work_orders|length }}
+        </div>
+        <div class="wb-stat-label">Open Orders</div>
+      </div>
+      <div class="wb-stat">
+        <div class="wb-stat-num">{% now "H:i" %}</div>
+        <div class="wb-stat-label">Current Time</div>
+      </div>
+      <div class="wb-stat">
+        {% with breach_count=0 %}
+        <div class="wb-stat-num {% if open_work_orders %}danger{% endif %}">
+          {% for wo in open_work_orders %}{% if wo.is_sla_breached %}⚠{% endif %}{% empty %}0{% endfor %}
+        </div>
+        {% endwith %}
+        <div class="wb-stat-label">SLA Issues</div>
+      </div>
+    </div>
+
+    <!-- Work Orders List -->
+    <div class="wb-section-header">
+      <div class="wb-section-title">
+        <i class="bi bi-clipboard-pulse"></i> Active Work Orders
+      </div>
+      {% if open_work_orders %}<span class="wb-count-pill">{{ open_work_orders|length }}</span>{% endif %}
+    </div>
+
+    <div class="wb-wo-list">
+      {% for wo in open_work_orders %}
+      <a href="{% url 'technician_device' wo.device.pk %}" class="wb-wo-card priority-{{ wo.maintenance_type }}">
+        <div class="wb-wo-icon icon-{{ wo.maintenance_type }}">
+          {% if wo.maintenance_type == 'emergency' %}<i class="bi bi-exclamation-triangle-fill"></i>
+          {% elif wo.maintenance_type == 'preventive' %}<i class="bi bi-shield-check"></i>
+          {% elif wo.maintenance_type == 'calibration' %}<i class="bi bi-rulers"></i>
+          {% else %}<i class="bi bi-wrench-adjustable"></i>{% endif %}
+        </div>
+        <div class="wb-wo-body">
+          <p class="wb-wo-name">{{ wo.device.name }}</p>
+          <div class="wb-wo-meta">
+            <span><i class="bi bi-hash"></i>WO-{{ wo.id }}</span>
+            <span><i class="bi bi-building"></i>{{ wo.device.department.name|default:"—" }}</span>
+            <span><i class="bi bi-geo-alt"></i>{{ wo.device.location|default:"No location" }}</span>
+          </div>
+          <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+            <span class="wb-status-badge
+              {% if wo.status == 'in_progress' %}status-in-progress
+              {% elif wo.status == 'assigned' %}status-assigned
+              {% elif wo.status == 'waiting_parts' %}status-waiting
+              {% else %}status-new{% endif %}">
+              {% if wo.status == 'in_progress' %}<i class="bi bi-play-circle-fill"></i>
+              {% elif wo.status == 'assigned' %}<i class="bi bi-person-check"></i>
+              {% elif wo.status == 'waiting_parts' %}<i class="bi bi-hourglass-split"></i>
+              {% else %}<i class="bi bi-circle"></i>{% endif %}
+              {{ wo.get_status_display }}
+            </span>
+            {% if wo.is_sla_breached %}
+            <span class="wb-sla-badge"><i class="bi bi-clock-history"></i> SLA BREACH</span>
+            {% endif %}
+            <span style="font-size:.7rem;color:var(--text-secondary);font-weight:600;">
+              {{ wo.get_maintenance_type_display }}
+            </span>
+          </div>
+        </div>
+        <i class="bi bi-chevron-right wb-wo-arrow"></i>
+      </a>
+      {% empty %}
+      <div class="wb-empty">
+        <div class="wb-empty-icon"><i class="bi bi-check2-circle"></i></div>
+        <h6>All clear — no open work orders</h6>
+        <p>Scan a device QR code above to start a new work order.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+
+  <nav class="wb-bottom-bar d-sm-none">
+    <a href="{% url 'technician_workbench' %}" class="wb-bottom-btn active">
+      <i class="bi bi-grid-3x3-gap-fill"></i><span>Workbench</span>
+    </a>
+    <a href="{% url 'technician_device_from_qr' %}" class="wb-bottom-btn">
+      <i class="bi bi-qr-code-scan"></i><span>Scan</span>
+    </a>
+    <a href="{% url 'dashboard' %}" class="wb-bottom-btn">
+      <i class="bi bi-speedometer2"></i><span>Dashboard</span>
+    </a>
+    <a href="{% url 'device_list' %}" class="wb-bottom-btn">
+      <i class="bi bi-hdd-stack"></i><span>Devices</span>
+    </a>
+  </nav>
+
 </div>
 {% endblock %}

@@ -1,55 +1,525 @@
 {% extends 'base.html' %}
-{% block title %}Technician Device - {{ device.name }}{% endblock %}
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h4>{{ device.name }} <small class="text-muted">{{ device.device_id }}</small></h4>
-  <a href="{% url 'technician_workbench' %}" class="btn btn-outline-secondary btn-sm">Back</a>
-</div>
+{% block title %}{{ device.name }} — Technician View{% endblock %}
 
-<div class="row g-3">
-  <div class="col-lg-6">
-    <div class="card p-3">
-      <h5>Start Work Order</h5>
-      <form method="post" action="{% url 'technician_start_work_order' device.pk %}">{% csrf_token %}
-        <label class="form-label">Type</label>
-        <select class="form-select mb-2" name="maintenance_type">
-          <option value="corrective">Corrective</option>
-          <option value="preventive">Preventive</option>
-          <option value="emergency">Emergency</option>
-          <option value="calibration">Calibration</option>
-        </select>
-        <textarea name="description" class="form-control mb-2" rows="3" placeholder="Issue/work description"></textarea>
-        <button class="btn btn-success">Start Work Order</button>
-      </form>
+{% block extra_css %}
+<style>
+.td-page { min-height: calc(100vh - 80px); padding-bottom: 5rem; }
+
+.td-hero {
+  background: linear-gradient(135deg, #032541 0%, #0369a1 60%, #0ea5e9 100%);
+  padding: 1.5rem 1.25rem 3.5rem;
+  position: relative; overflow: hidden;
+}
+.td-hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 90% 10%, rgba(14,165,233,.35) 0%, transparent 50%);
+  pointer-events: none;
+}
+.td-hero::after {
+  content: ''; position: absolute;
+  bottom: -1px; left: 0; right: 0; height: 44px;
+  background: var(--bg-primary, #f0f9ff);
+  clip-path: ellipse(55% 100% at 50% 100%);
+}
+[data-bs-theme="dark"] .td-hero::after { background: var(--bg-primary, #020617); }
+.td-hero-inner { position: relative; z-index: 1; max-width: 680px; margin: 0 auto; }
+
+.td-back-btn { display: inline-flex; align-items: center; gap: .4rem; color: rgba(255,255,255,.75); font-size: .82rem; font-weight: 600; text-decoration: none; margin-bottom: 1.1rem; transition: color 200ms; }
+.td-back-btn:hover { color: #fff; }
+
+.td-device-id-chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.25);
+  color: #e0f2fe; font-size: .72rem; font-weight: 700;
+  letter-spacing: .09em; text-transform: uppercase;
+  padding: .3rem .75rem; border-radius: 999px; margin-bottom: .75rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+.td-hero h1 { font-size: clamp(1.35rem, 5vw, 1.85rem); font-weight: 800; color: #fff; margin-bottom: .5rem; letter-spacing: -.02em; line-height: 1.15; }
+.td-hero-meta { display: flex; flex-wrap: wrap; gap: .5rem .9rem; font-size: .8rem; color: rgba(224,242,254,.8); }
+.td-hero-meta span { display: flex; align-items: center; gap: .3rem; }
+
+.td-active-bar {
+  background: linear-gradient(90deg, rgba(217,119,6,.15), rgba(251,191,36,.08));
+  border: 1px solid rgba(217,119,6,.3);
+  border-radius: 14px; padding: .85rem 1.1rem;
+  display: flex; align-items: center; gap: .75rem; margin-bottom: 1.25rem;
+}
+.td-active-pulse { width: 10px; height: 10px; border-radius: 50%; background: #d97706; flex-shrink: 0; position: relative; }
+.td-active-pulse::after {
+  content: ''; position: absolute; inset: -4px;
+  border-radius: 50%; border: 2px solid #d97706;
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: .7; }
+  100% { transform: scale(1.8); opacity: 0;  }
+}
+.td-active-bar-text strong { font-size: .88rem; font-weight: 700; color: var(--app-warning, #d97706); display: block; }
+.td-active-bar-text span   { font-size: .75rem; color: var(--text-secondary, #334155); }
+
+.td-content { max-width: 680px; margin: 0 auto; padding: 1.25rem 1rem 0; }
+
+/* Tabs */
+.td-tabs {
+  display: flex; gap: .5rem;
+  background: var(--bg-primary, #f0f9ff);
+  border: 1px solid var(--border-color, rgba(14,116,144,.14));
+  border-radius: 14px; padding: .3rem; margin-bottom: 1.25rem;
+}
+.td-tab {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  gap: .4rem; padding: .65rem .5rem;
+  border-radius: 10px; font-size: .78rem; font-weight: 600;
+  color: var(--text-secondary, #64748b);
+  cursor: pointer; border: none; background: none; transition: all 200ms;
+}
+.td-tab.active { background: var(--bg-surface, #fff); color: var(--app-primary, #0369a1); box-shadow: 0 1px 6px rgba(0,0,0,.08); }
+.td-tab i { font-size: .9rem; }
+
+.td-panel { display: none; }
+.td-panel.active { display: block; animation: fadeUp .25s ease both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Cards */
+.td-card {
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-color, rgba(14,116,144,.14));
+  border-radius: 18px; padding: 1.35rem; margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(2,132,199,.08);
+}
+.td-card-label { font-size: .68rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--app-primary, #0369a1); margin-bottom: 1rem; display: flex; align-items: center; gap: .4rem; }
+
+.td-field-label { font-size: .78rem; font-weight: 600; color: var(--text-secondary, #334155); margin-bottom: .4rem; display: block; }
+.td-form-control {
+  width: 100%;
+  border: 1.5px solid var(--border-color, rgba(14,116,144,.2));
+  border-radius: 10px; padding: .75rem .9rem;
+  font-size: .9rem;
+  background: var(--bg-primary, #f0f9ff);
+  color: var(--text-primary, #0f172a);
+  outline: none; transition: border-color 200ms, box-shadow 200ms;
+  font-family: 'Poppins', sans-serif; display: block; margin-bottom: .85rem;
+}
+.td-form-control:focus { border-color: var(--app-primary, #0369a1); box-shadow: 0 0 0 3px rgba(3,105,161,.12); background: var(--bg-surface, #fff); }
+.td-form-control::placeholder { color: var(--text-secondary, #64748b); }
+textarea.td-form-control { resize: vertical; min-height: 90px; }
+
+/* Type selector */
+.td-type-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .6rem; margin-bottom: .85rem; }
+.td-type-option { position: relative; }
+.td-type-option input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.td-type-label {
+  display: flex; flex-direction: column; align-items: center; gap: .4rem;
+  padding: .9rem .5rem;
+  border: 1.5px solid var(--border-color, rgba(14,116,144,.18));
+  border-radius: 12px; cursor: pointer; transition: all 200ms;
+  background: var(--bg-primary, #f0f9ff); text-align: center;
+}
+.td-type-label i { font-size: 1.35rem; }
+.td-type-label span { font-size: .73rem; font-weight: 600; color: var(--text-secondary, #334155); }
+.td-type-option input:checked + .td-type-label {
+  border-color: var(--app-primary, #0369a1);
+  background: rgba(3,105,161,.07);
+  box-shadow: 0 0 0 2px rgba(3,105,161,.15);
+}
+.td-type-option input:checked + .td-type-label i,
+.td-type-option input:checked + .td-type-label span { color: var(--app-primary, #0369a1); }
+.type-emergency  i { color: #dc2626; }
+.type-corrective i { color: #d97706; }
+.type-preventive i { color: #059669; }
+.type-calibration i{ color: #2563eb; }
+
+/* Buttons */
+.td-btn-start {
+  width: 100%; padding: 1rem;
+  background: linear-gradient(135deg, #059669, #0d9488);
+  color: #fff; border: none; border-radius: 12px;
+  font-size: .95rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: .6rem;
+  transition: all 220ms;
+}
+.td-btn-start:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(5,150,105,.35); }
+
+.td-btn-stop {
+  width: 100%; padding: 1rem;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff; border: none; border-radius: 12px;
+  font-size: .95rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: .6rem;
+  transition: all 220ms;
+}
+.td-btn-stop:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(217,119,6,.35); }
+
+.td-btn-sync {
+  width: 100%; padding: .85rem;
+  background: var(--bg-primary, #f0f9ff);
+  color: var(--app-primary, #0369a1);
+  border: 1.5px solid var(--app-primary, #0369a1);
+  border-radius: 12px; font-size: .88rem; font-weight: 700; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+  transition: all 200ms; text-decoration: none;
+}
+.td-btn-sync:hover { background: rgba(3,105,161,.08); }
+
+/* Status selector */
+.td-status-grid { display: flex; flex-direction: column; gap: .45rem; margin-bottom: .85rem; }
+.td-status-option { position: relative; }
+.td-status-option input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.td-status-pill {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .75rem 1rem;
+  border: 1.5px solid var(--border-color, rgba(14,116,144,.18));
+  border-radius: 10px; cursor: pointer; transition: all 180ms;
+  background: var(--bg-primary, #f0f9ff);
+}
+.td-status-pill i { font-size: 1rem; }
+.td-status-pill span { font-size: .85rem; font-weight: 600; color: var(--text-secondary, #334155); flex: 1; }
+.td-status-pill small { font-size: .72rem; color: var(--text-secondary, #64748b); }
+.td-status-option input:checked + .td-status-pill { border-color: var(--app-primary, #0369a1); background: rgba(3,105,161,.06); }
+.status-pill-complete i { color: #059669; }
+.status-pill-waiting  i { color: #7c3aed; }
+.status-pill-verified i { color: #0369a1; }
+
+/* File input */
+.td-file-label {
+  display: flex; align-items: center; gap: .6rem;
+  padding: .75rem .9rem;
+  border: 1.5px dashed var(--border-color, rgba(14,116,144,.25));
+  border-radius: 10px; cursor: pointer; font-size: .85rem;
+  color: var(--text-secondary, #64748b); font-weight: 500; margin-bottom: .85rem;
+  transition: border-color 200ms, color 200ms;
+}
+.td-file-label:hover { border-color: var(--app-primary, #0369a1); color: var(--app-primary, #0369a1); }
+.td-file-input { display: none; }
+
+/* Device info */
+.td-info-row { display: flex; justify-content: space-between; align-items: baseline; padding: .65rem 0; border-bottom: 1px solid var(--border-color, rgba(14,116,144,.1)); gap: 1rem; }
+.td-info-row:last-child { border-bottom: none; padding-bottom: 0; }
+.td-info-key { font-size: .78rem; font-weight: 600; color: var(--text-secondary, #64748b); flex-shrink: 0; }
+.td-info-val { font-size: .85rem; font-weight: 700; color: var(--text-primary, #0f172a); text-align: right; }
+
+.td-device-status { display: inline-flex; align-items: center; gap: .3rem; font-size: .75rem; font-weight: 700; padding: .25rem .65rem; border-radius: 999px; }
+.td-status-active      { background: rgba(5,150,105,.12); color: #065f46; }
+.td-status-maintenance { background: rgba(217,119,6,.12);  color: #92400e; }
+.td-status-inactive    { background: rgba(100,116,139,.12);color: #374151; }
+[data-bs-theme="dark"] .td-status-active      { color: #6ee7b7; }
+[data-bs-theme="dark"] .td-status-maintenance { color: #fde68a; }
+[data-bs-theme="dark"] .td-status-inactive    { color: #d1d5db; }
+
+.td-no-wo { text-align: center; padding: 2rem 1rem; }
+.td-no-wo-icon { width: 56px; height: 56px; border-radius: 50%; background: rgba(3,105,161,.08); display: flex; align-items: center; justify-content: center; font-size: 1.35rem; color: var(--app-primary, #0369a1); margin: 0 auto 1rem; }
+
+/* Mobile nav */
+.td-bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--bg-surface, #fff);
+  border-top: 1px solid var(--border-color, rgba(14,116,144,.14));
+  padding: .75rem 1rem; display: flex; justify-content: space-around;
+  z-index: 100; box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+}
+.td-bottom-btn {
+  display: flex; flex-direction: column; align-items: center; gap: .25rem;
+  font-size: .65rem; font-weight: 600; color: var(--text-secondary, #64748b);
+  text-decoration: none; padding: .4rem .75rem;
+  border-radius: 10px; transition: all 220ms;
+  background: none; border: none; cursor: pointer;
+}
+.td-bottom-btn i { font-size: 1.2rem; }
+.td-bottom-btn:hover, .td-bottom-btn.active { color: var(--app-primary, #0369a1); background: rgba(3,105,161,.08); }
+
+@keyframes slideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+.td-card { animation: slideUp .32s ease both; }
+.td-card:nth-child(2) { animation-delay: .06s; }
+.td-card:nth-child(3) { animation-delay: .12s; }
+
+@media (min-width: 640px) {
+  .td-hero    { padding: 2rem 2rem 3.5rem; }
+  .td-content { padding: 1.75rem 1.5rem 0; }
+  .td-bottom-bar { display: none !important; }
+  .td-page { padding-bottom: 2rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="td-page">
+
+  <div class="td-hero">
+    <div class="td-hero-inner">
+      <a href="{% url 'technician_workbench' %}" class="td-back-btn">
+        <i class="bi bi-chevron-left"></i> Back to Workbench
+      </a>
+      <div class="td-device-id-chip"><i class="bi bi-upc"></i> {{ device.device_id }}</div>
+      <h1>{{ device.name }}</h1>
+      <div class="td-hero-meta">
+        <span><i class="bi bi-building"></i> {{ device.department.name|default:"No department" }}</span>
+        <span><i class="bi bi-geo-alt"></i> {{ device.location|default:"No location" }}</span>
+        <span><i class="bi bi-tag"></i> {{ device.get_device_type_display|default:device.device_type }}</span>
+      </div>
     </div>
   </div>
 
-  <div class="col-lg-6">
-    <div class="card p-3">
-      <h5>Stop & Close Work Order</h5>
+  <div class="td-content">
+
+    {% if active_work_order %}
+    <div class="td-active-bar">
+      <div class="td-active-pulse"></div>
+      <div class="td-active-bar-text">
+        <strong>Work Order #{{ active_work_order.id }} is active</strong>
+        <span>{{ active_work_order.get_maintenance_type_display }} · Started
+          {% if active_work_order.started_at %}{{ active_work_order.started_at|date:"M d, H:i" }}{% else %}today{% endif %}
+        </span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Tab Nav -->
+    <div class="td-tabs" role="tablist">
+      <button class="td-tab active" onclick="switchTab(this,'panel-start')" type="button">
+        <i class="bi bi-play-circle"></i> Start WO
+      </button>
+      <button class="td-tab" onclick="switchTab(this,'panel-close')" type="button">
+        <i class="bi bi-stop-circle"></i> Close WO
+      </button>
+      <button class="td-tab" onclick="switchTab(this,'panel-sync')" type="button">
+        <i class="bi bi-cloud-arrow-up"></i> Sync
+      </button>
+      <button class="td-tab" onclick="switchTab(this,'panel-info')" type="button">
+        <i class="bi bi-info-circle"></i> Device
+      </button>
+    </div>
+
+    <!-- Panel: Start WO -->
+    <div id="panel-start" class="td-panel active">
+      <div class="td-card">
+        <div class="td-card-label"><i class="bi bi-plus-circle-fill"></i> New Work Order</div>
+        <form method="post" action="{% url 'technician_start_work_order' device.pk %}">
+          {% csrf_token %}
+          <label class="td-field-label">Work Order Type</label>
+          <div class="td-type-grid">
+            <div class="td-type-option">
+              <input type="radio" name="maintenance_type" id="type-corrective" value="corrective" checked>
+              <label class="td-type-label type-corrective" for="type-corrective">
+                <i class="bi bi-wrench-adjustable-circle-fill"></i><span>Corrective</span>
+              </label>
+            </div>
+            <div class="td-type-option">
+              <input type="radio" name="maintenance_type" id="type-preventive" value="preventive">
+              <label class="td-type-label type-preventive" for="type-preventive">
+                <i class="bi bi-shield-fill-check"></i><span>Preventive</span>
+              </label>
+            </div>
+            <div class="td-type-option">
+              <input type="radio" name="maintenance_type" id="type-emergency" value="emergency">
+              <label class="td-type-label type-emergency" for="type-emergency">
+                <i class="bi bi-exclamation-triangle-fill"></i><span>Emergency</span>
+              </label>
+            </div>
+            <div class="td-type-option">
+              <input type="radio" name="maintenance_type" id="type-calibration" value="calibration">
+              <label class="td-type-label type-calibration" for="type-calibration">
+                <i class="bi bi-rulers"></i><span>Calibration</span>
+              </label>
+            </div>
+          </div>
+          <label class="td-field-label" for="wo-description">Issue Description</label>
+          <textarea id="wo-description" name="description" class="td-form-control"
+            placeholder="Describe the issue or work to be performed…" rows="4"></textarea>
+          <button type="submit" class="td-btn-start">
+            <i class="bi bi-play-circle-fill"></i> Start Work Order
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Panel: Close WO -->
+    <div id="panel-close" class="td-panel">
       {% if active_work_order %}
-      <form method="post" enctype="multipart/form-data" action="{% url 'technician_stop_work_order' active_work_order.id %}">{% csrf_token %}
-        <div class="alert alert-info py-2">Active WO: #{{ active_work_order.id }}</div>
-        <select class="form-select mb-2" name="status">
-          <option value="completed">Completed</option>
-          <option value="waiting_parts">Waiting Parts</option>
-          <option value="verified">Verified</option>
-        </select>
-        <input type="text" name="technician_signature" class="form-control mb-2" placeholder="Technician signature">
-        <input type="file" name="photo_attachment" class="form-control mb-2">
-        <textarea name="notes" class="form-control mb-2" rows="3" placeholder="Completion notes"></textarea>
-        <button class="btn btn-warning">Stop / Update</button>
-      </form>
-      <hr>
-      <h6>Offline Notes Sync</h6>
-      <form method="post" action="{% url 'technician_sync_notes' active_work_order.id %}">{% csrf_token %}
-        <textarea name="offline_notes_blob" class="form-control mb-2" rows="4" placeholder="Paste offline notes; one note per line"></textarea>
-        <button class="btn btn-primary btn-sm">Sync Notes</button>
-      </form>
+      <div class="td-card">
+        <div class="td-card-label"><i class="bi bi-stop-circle-fill"></i> Close Work Order #{{ active_work_order.id }}</div>
+        <form method="post" enctype="multipart/form-data" action="{% url 'technician_stop_work_order' active_work_order.id %}">
+          {% csrf_token %}
+          <label class="td-field-label">Update Status</label>
+          <div class="td-status-grid">
+            <div class="td-status-option">
+              <input type="radio" name="status" id="s-completed" value="completed" checked>
+              <label class="td-status-pill status-pill-complete" for="s-completed">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Completed</span><small>Work finished</small>
+              </label>
+            </div>
+            <div class="td-status-option">
+              <input type="radio" name="status" id="s-waiting" value="waiting_parts">
+              <label class="td-status-pill status-pill-waiting" for="s-waiting">
+                <i class="bi bi-hourglass-split"></i>
+                <span>Waiting for Parts</span><small>Parts needed</small>
+              </label>
+            </div>
+            <div class="td-status-option">
+              <input type="radio" name="status" id="s-verified" value="verified">
+              <label class="td-status-pill status-pill-verified" for="s-verified">
+                <i class="bi bi-patch-check-fill"></i>
+                <span>Verified</span><small>Supervisor confirmed</small>
+              </label>
+            </div>
+          </div>
+          <label class="td-field-label" for="sig-input">Technician Signature</label>
+          <input type="text" id="sig-input" name="technician_signature" class="td-form-control"
+            placeholder="Type your full name"
+            value="{{ user.get_full_name|default:user.username }}">
+          <label class="td-field-label">Attach Photo (optional)</label>
+          <label class="td-file-label" for="photo-input">
+            <i class="bi bi-camera-fill" style="font-size:1.1rem"></i>
+            <span id="photo-label-text">Tap to attach photo or document</span>
+          </label>
+          <input type="file" id="photo-input" name="photo_attachment" class="td-file-input" accept="image/*,application/pdf">
+          <label class="td-field-label" for="close-notes">Completion Notes</label>
+          <textarea id="close-notes" name="notes" class="td-form-control"
+            placeholder="Summarise what was done, parts used, observations…"
+            rows="4">{{ active_work_order.notes }}</textarea>
+          <button type="submit" class="td-btn-stop">
+            <i class="bi bi-stop-circle-fill"></i> Close Work Order
+          </button>
+        </form>
+      </div>
       {% else %}
-      <p class="text-muted mb-0">No active work order for this device.</p>
+      <div class="td-card td-no-wo">
+        <div class="td-no-wo-icon"><i class="bi bi-clipboard-x"></i></div>
+        <h6 style="font-weight:700;margin-bottom:.35rem">No active work order</h6>
+        <p style="font-size:.85rem;color:var(--text-secondary)">Start a work order from the "Start WO" tab first.</p>
+      </div>
       {% endif %}
     </div>
+
+    <!-- Panel: Sync Notes -->
+    <div id="panel-sync" class="td-panel">
+      {% if active_work_order %}
+      <div class="td-card">
+        <div class="td-card-label"><i class="bi bi-cloud-arrow-up-fill"></i> Sync Offline Notes — WO #{{ active_work_order.id }}</div>
+        <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:1rem">
+          Paste notes collected while offline (one note per line). They will be saved with timestamps.
+        </p>
+        <form method="post" action="{% url 'technician_sync_notes' active_work_order.id %}">
+          {% csrf_token %}
+          <label class="td-field-label" for="offline-notes">Offline Notes</label>
+          <textarea id="offline-notes" name="offline_notes_blob" class="td-form-control"
+            placeholder="Line 1: observation or action taken&#10;Line 2: another note&#10;Line 3: …"
+            rows="8"></textarea>
+          <button type="submit" class="td-btn-sync">
+            <i class="bi bi-cloud-arrow-up"></i> Sync Notes
+          </button>
+        </form>
+      </div>
+      {% else %}
+      <div class="td-card td-no-wo">
+        <div class="td-no-wo-icon"><i class="bi bi-cloud-slash"></i></div>
+        <h6 style="font-weight:700;margin-bottom:.35rem">No active work order to sync</h6>
+        <p style="font-size:.85rem;color:var(--text-secondary)">Start a work order first, then sync your offline notes here.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Panel: Device Info -->
+    <div id="panel-info" class="td-panel">
+      <div class="td-card">
+        <div class="td-card-label"><i class="bi bi-hdd-fill"></i> Device Information</div>
+        <div class="td-info-row">
+          <span class="td-info-key">Status</span>
+          <span class="td-device-status td-status-{{ device.status }}">
+            {{ device.get_status_display|default:device.status }}
+          </span>
+        </div>
+        <div class="td-info-row">
+          <span class="td-info-key">Manufacturer</span>
+          <span class="td-info-val">{{ device.manufacturer|default:"—" }}</span>
+        </div>
+        <div class="td-info-row">
+          <span class="td-info-key">Model</span>
+          <span class="td-info-val">{{ device.model|default:"—" }}</span>
+        </div>
+        <div class="td-info-row">
+          <span class="td-info-key">Serial No.</span>
+          <span class="td-info-val" style="font-family:'JetBrains Mono',monospace;font-size:.8rem">{{ device.serial_number|default:"—" }}</span>
+        </div>
+        <div class="td-info-row">
+          <span class="td-info-key">Department</span>
+          <span class="td-info-val">{{ device.department.name|default:"—" }}</span>
+        </div>
+        <div class="td-info-row">
+          <span class="td-info-key">Location</span>
+          <span class="td-info-val">{{ device.location|default:"—" }}</span>
+        </div>
+        <div class="td-info-row">
+          <span class="td-info-key">Last Service</span>
+          <span class="td-info-val">{{ device.last_maintenance|date:"M d, Y"|default:"Never" }}</span>
+        </div>
+        <div class="td-info-row">
+          <span class="td-info-key">Next Service</span>
+          <span class="td-info-val">{{ device.next_maintenance|date:"M d, Y"|default:"Not scheduled" }}</span>
+        </div>
+        <div class="td-info-row">
+          <span class="td-info-key">Warranty</span>
+          <span class="td-info-val">{{ device.warranty_expiry|date:"M d, Y"|default:"—" }}</span>
+        </div>
+      </div>
+
+      <div class="td-card" style="text-align:center">
+        <div class="td-card-label" style="justify-content:center"><i class="bi bi-qr-code"></i> Device QR Code</div>
+        {% if device.qr_code %}
+        <img src="{% url 'device_qr' device.pk %}" alt="QR Code"
+          style="max-width:160px;border-radius:12px;margin-bottom:.75rem">
+        <p style="font-size:.78rem;color:var(--text-secondary);margin:0">Scan to open this device page</p>
+        {% else %}
+        <p style="font-size:.82rem;color:var(--text-secondary)">QR code not generated yet.</p>
+        {% endif %}
+        <a href="{% url 'device_detail' device.pk %}" class="td-btn-sync" style="margin-top:.85rem">
+          <i class="bi bi-box-arrow-up-right"></i> View Full Device Record
+        </a>
+      </div>
+    </div>
+
   </div>
+
+  <nav class="td-bottom-bar d-sm-none">
+    <a href="{% url 'technician_workbench' %}" class="td-bottom-btn">
+      <i class="bi bi-grid-3x3-gap-fill"></i><span>Workbench</span>
+    </a>
+    <button class="td-bottom-btn active" onclick="switchTab(document.querySelectorAll('.td-tab')[0],'panel-start')" type="button">
+      <i class="bi bi-play-circle"></i><span>Start</span>
+    </button>
+    <button class="td-bottom-btn" onclick="switchTab(document.querySelectorAll('.td-tab')[1],'panel-close')" type="button">
+      <i class="bi bi-stop-circle"></i><span>Close</span>
+    </button>
+    <button class="td-bottom-btn" onclick="switchTab(document.querySelectorAll('.td-tab')[3],'panel-info')" type="button">
+      <i class="bi bi-info-circle"></i><span>Info</span>
+    </button>
+  </nav>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function switchTab(btn, panelId) {
+  document.querySelectorAll('.td-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.td-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+// Show chosen filename
+const photoInput = document.getElementById('photo-input');
+if (photoInput) {
+  photoInput.addEventListener('change', function() {
+    const lbl = document.getElementById('photo-label-text');
+    if (lbl && this.files.length > 0) lbl.textContent = this.files[0].name;
+  });
+}
+
+// Auto-open Close tab if active WO exists
+{% if active_work_order %}
+  switchTab(document.querySelectorAll('.td-tab')[1], 'panel-close');
+{% endif %}
+</script>
 {% endblock %}
