@@ -51,57 +51,76 @@ def compute_failure_prediction(device, maintenances_qs) -> FailurePrediction:
 
     # Frequency scoring
     if m30 >= 3:
-        score += 18; drivers.append(f"High maintenance frequency in last 30 days ({m30}).")
+        score += 18
+        drivers.append(f"High maintenance frequency in last 30 days ({m30}).")
     elif m30 == 2:
-        score += 10; drivers.append("Two maintenances in last 30 days.")
+        score += 10
+        drivers.append("Two maintenances in last 30 days.")
     elif m30 == 1:
-        score += 5; drivers.append("One maintenance in last 30 days.")
+        score += 5
+        drivers.append("One maintenance in last 30 days.")
 
     if m90 >= 6:
-        score += 14; drivers.append(f"High maintenance frequency in last 90 days ({m90}).")
+        score += 14
+        drivers.append(f"High maintenance frequency in last 90 days ({m90}).")
     elif m90 >= 3:
-        score += 8; drivers.append(f"Moderate maintenance frequency in last 90 days ({m90}).")
+        score += 8
+        drivers.append(f"Moderate maintenance frequency in last 90 days ({m90}).")
 
     # Corrective/Emergency are strong risk drivers
     if emergency_90 >= 2:
-        score += 30; drivers.append(f"Multiple emergency maintenances in last 90 days ({emergency_90}).")
+        score += 30
+        drivers.append(f"Multiple emergency maintenances in last 90 days ({emergency_90}).")
     elif emergency_90 == 1:
-        score += 18; drivers.append("Emergency maintenance recorded recently.")
+        score += 18
+        drivers.append("Emergency maintenance recorded recently.")
 
     if corrective_90 >= 2:
-        score += 22; drivers.append(f"Multiple corrective maintenances in last 90 days ({corrective_90}).")
+        score += 22
+        drivers.append(f"Multiple corrective maintenances in last 90 days ({corrective_90}).")
     elif corrective_90 == 1:
-        score += 12; drivers.append("Corrective maintenance recorded recently.")
+        score += 12
+        drivers.append("Corrective maintenance recorded recently.")
 
     # Open/incomplete work
     if open_count >= 2:
-        score += 18; drivers.append(f"There are {open_count} incomplete maintenance records.")
+        score += 18
+        drivers.append(f"There are {open_count} incomplete maintenance records.")
     elif open_count == 1:
-        score += 10; drivers.append("There is an incomplete maintenance record.")
+        score += 10
+        drivers.append("There is an incomplete maintenance record.")
 
     # Cost effect (tune thresholds as you like)
     if recent_cost >= 20000:
-        score += 12; drivers.append(f"High maintenance cost in last 90 days ({int(recent_cost)} EGP).")
+        score += 12
+        drivers.append(f"High maintenance cost in last 90 days ({int(recent_cost)} EGP).")
     elif recent_cost >= 8000:
-        score += 7; drivers.append("Elevated maintenance cost in last 90 days.")
+        score += 7
+        drivers.append("Elevated maintenance cost in last 90 days.")
 
     # Device status impact
     if device.status == "maintenance":
-        score += 15; drivers.append("Device is currently under maintenance.")
+        score += 15
+        drivers.append("Device is currently under maintenance.")
     elif device.status == "inactive":
-        score += 20; drivers.append("Device is currently inactive.")
+        score += 20
+        drivers.append("Device is currently inactive.")
     elif device.status == "retired":
-        score += 35; drivers.append("Device is retired (operational risk is effectively critical).")
+        score += 35
+        drivers.append("Device is retired (operational risk is effectively critical).")
 
     # Next maintenance proximity/overdue
     if device.next_maintenance:
         days_to_next = (device.next_maintenance - today).days
         if days_to_next < 0:
-            score += 18; drivers.append("Next maintenance is overdue.")
+            score += 18
+            drivers.append("Next maintenance is overdue.")
         elif days_to_next <= 7:
-            score += 10; drivers.append("Next maintenance due within 7 days.")
+            score += 10
+            drivers.append("Next maintenance due within 7 days.")
         elif days_to_next <= 21:
-            score += 5; drivers.append("Next maintenance due within 21 days.")
+            score += 5
+            drivers.append("Next maintenance due within 21 days.")
 
     # Confidence from data volume
     if total >= 12:

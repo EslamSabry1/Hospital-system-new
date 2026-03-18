@@ -6,21 +6,21 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hospital_system.settings')
 django.setup()
 
-from django.core.management import execute_from_command_line
-from devices.models import Department, Device, Maintenance
-from django.utils import timezone
-from datetime import timedelta
+from django.core.management import execute_from_command_line  # noqa: E402
+from devices.models import Department, Device, Maintenance  # noqa: E402
+from django.utils import timezone  # noqa: E402
+from datetime import timedelta  # noqa: E402
 
 def reset_database():
     print("🔄 Deleting database...")
-    
+
     Device.objects.all().delete()
     Department.objects.all().delete()
     Maintenance.objects.all().delete()
-    
+
     print("✅ All data deleted")
     print("🔄 Adding sample data...")
-    
+
     departments = [
         Department(name='ICU', floor=3, phone='1234'),
         Department(name='Emergency', floor=1, phone='5678'),
@@ -28,12 +28,12 @@ def reset_database():
         Department(name='Laboratory', floor=2, phone='3456'),
         Department(name='Outpatient Clinics', floor=1, phone='7890'),
     ]
-    
+
     for dept in departments:
         dept.save()
-    
+
     print(f"✅ Created {len(departments)} departments")
-    
+
     devices_data = [
         {
             'name': 'Advanced Patient Monitor',
@@ -96,7 +96,7 @@ def reset_database():
             'location': 'Radiology Department',
         },
     ]
-    
+
     created_devices = []
     for device_data in devices_data:
         device = Device(**device_data)
@@ -107,9 +107,9 @@ def reset_database():
         device.notes = "High quality device - requires regular maintenance"
         device.save()
         created_devices.append(device)
-    
+
     print(f"✅ Created {len(created_devices)} devices")
-    
+
     maintenance_data = [
         {
             'device': created_devices[2],
@@ -130,10 +130,10 @@ def reset_database():
             'completed': True,
         },
     ]
-    
+
     for maint_data in maintenance_data:
         Maintenance.objects.create(**maint_data)
-    
+
     print(f"✅ Created maintenance records")
     print("\n🎉 Database reset successfully!")
     print("📊 Available data:")

@@ -14,11 +14,11 @@ def create_sample_data(modeladmin, request, queryset):
             Department(name='Radiology', floor=2, phone='9012'),
             Department(name='Laboratory', floor=2, phone='3456'),
         ]
-        
+
         for dept in departments:
             if not Department.objects.filter(name=dept.name).exists():
                 dept.save()
-        
+
         devices_data = [
             {
                 'name': 'Patient Monitor',
@@ -51,7 +51,7 @@ def create_sample_data(modeladmin, request, queryset):
                 'price': 45000,
             },
         ]
-        
+
         for device_data in devices_data:
             if not Device.objects.filter(device_id=device_data['device_id']).exists():
                 device = Device(**device_data)
@@ -59,7 +59,7 @@ def create_sample_data(modeladmin, request, queryset):
                 device.warranty_expiry = timezone.now().date() + timedelta(days=180)
                 device.location = 'ICU'
                 device.save()
-        
+
         messages.success(request, "✅ Sample data created successfully!")
     except Exception as e:
         messages.error(request, f"An error occurred: {str(e)}")
@@ -82,7 +82,7 @@ class DeviceAdmin(admin.ModelAdmin):
 class DepartmentAdmin(admin.ModelAdmin):
     list_display = ['name', 'floor', 'phone', 'device_count']
     search_fields = ['name']
-    
+
     def device_count(self, obj):
         return obj.device_set.count()
     device_count.short_description = 'Device Count'

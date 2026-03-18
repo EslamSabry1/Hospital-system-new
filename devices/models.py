@@ -13,11 +13,11 @@ class Department(models.Model):
     name = models.CharField(max_length=200, verbose_name='Department Name')
     floor = models.IntegerField(verbose_name='Floor')
     phone = models.CharField(max_length=15, blank=True, verbose_name='Phone Number')
-    
+
     class Meta:
         verbose_name = 'Department'
         verbose_name_plural = 'Departments'
-    
+
     def __str__(self):
         return f"{self.name} - Floor {self.floor}"
 
@@ -28,7 +28,7 @@ class Device(models.Model):
         ('maintenance', 'Under Maintenance'),
         ('retired', 'Retired'),
     ]
-    
+
     DEVICE_TYPE = [
         ('monitor', 'Monitor'),
         ('infusion_pump', 'Infusion Pump'),
@@ -38,7 +38,7 @@ class Device(models.Model):
         ('xray', 'X-Ray'),
         ('other', 'Other'),
     ]
-    
+
     name = models.CharField(max_length=200, verbose_name='Device Name')
     device_id = models.CharField(max_length=50, unique=True, verbose_name='Device ID')
     serial_number = models.CharField(max_length=100, unique=True, verbose_name='Serial Number')
@@ -57,20 +57,20 @@ class Device(models.Model):
     qr_code = models.ImageField(blank=True, upload_to='qrcodes/', verbose_name='QR Code')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated At')
-    
+
     class Meta:
         verbose_name = 'Device'
         verbose_name_plural = 'Devices'
         ordering = ['-created_at']
 
     AUTO_INACTIVE_MAINTENANCE_STATUSES = {'new', 'assigned', 'in_progress', 'waiting_parts'}
-    
+
     def __str__(self):
         return f"{self.name} ({self.device_id})"
-    
+
     def get_absolute_url(self):
         return reverse('device_detail', kwargs={'pk': self.pk})
-    
+
     def get_status_color(self):
         colors = {
             'active': 'success',
@@ -79,10 +79,10 @@ class Device(models.Model):
             'retired': 'danger'
         }
         return colors.get(self.status, 'secondary')
-    
+
     def generate_qr_code(self):
         device_url = settings.BASE_URL + self.get_absolute_url()
-        
+
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -91,16 +91,16 @@ class Device(models.Model):
         )
         qr.add_data(device_url)
         qr.make(fit=True)
-        
+
         img = qr.make_image(fill_color="black", back_color="white")
-        
+
         buffer = BytesIO()
         img.save(buffer, format='PNG')
         buffer.seek(0)
-        
+
         filename = f'qr_{self.device_id}_{self.id}.png'
         self.qr_code.save(filename, File(buffer), save=False)
-    
+
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
 
@@ -186,7 +186,7 @@ class Maintenance(models.Model):
         'completed': 4,
         'verified': 5,
     }
-    
+
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='maintenances', verbose_name='Device')
     maintenance_type = models.CharField(max_length=20, choices=MAINTENANCE_TYPE, verbose_name='Maintenance Type')
     date = models.DateField(default=timezone.now, verbose_name='Maintenance Date')
@@ -205,12 +205,12 @@ class Maintenance(models.Model):
     completed = models.BooleanField(default=True, verbose_name='Completed')
     next_maintenance_date = models.DateField(blank=True, null=True, verbose_name='Next Maintenance Date')
     created_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         verbose_name = 'Maintenance'
         verbose_name_plural = 'Maintenance Records'
         ordering = ['-date']
-    
+
     def __str__(self):
         return f"Maintenance {self.device.name} - {self.date}"
 

@@ -8,10 +8,13 @@ from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.db.models import Count, Avg, Sum, Q
 from django.http import HttpResponse, JsonResponse
+from django.db import connection
 from django.utils import timezone
 from django.views.decorators.http import require_GET
 from django.urls import reverse
 
+import qrcode
+import io
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 
@@ -21,12 +24,6 @@ from .scheduling import sync_calendar
 
 from .utils.prediction import compute_failure_prediction
 
-
-from django.http import HttpResponse as _HttpResponse
-
-def healthz(request):
-    """Lightweight liveness probe for Docker / load-balancer healthchecks."""
-    return _HttpResponse("ok", content_type="text/plain", status=200)
 
 
 
@@ -160,18 +157,15 @@ def devices_export_excel(request):
     return response
 
 # Prediction utility
-from .utils.prediction import compute_failure_prediction
 
 # Language (you had these)
-from django.utils.translation import gettext as _
-from django.views.i18n import set_language
 
 
 def login_view(request):
     if request.user.is_authenticated:
         # Redirect to Control Center instead of dashboard
         return redirect('control_center')  # Changed from 'dashboard'
-    
+
     if request.method == 'POST':
         form = LoginForm(request.POST)
         if form.is_valid():
@@ -504,12 +498,12 @@ def control_center(request):
     active_devices = device_qs.filter(status='active').count()
     maintenance_devices = device_qs.filter(status='maintenance').count()
     inactive_devices = device_qs.filter(status='inactive').count()
-    
+
     # Critical alerts calculation
     today = date.today()
     critical_alerts = 0
     overdue_maintenance = []
-    
+
     # Get devices with next maintenance
     devices_with_maintenance = device_qs.filter(next_maintenance__isnull=False)
     for device in devices_with_maintenance:
@@ -525,23 +519,23 @@ def control_center(request):
                 })
             elif delta.days <= 3:  # Due within 3 days (critical)
                 critical_alerts += 1
-    
+
     # Departments count
     total_departments = Department.objects.count()
 
     # Today's work metrics
     todays_maintenance = Maintenance.objects.select_related('device').filter(date=today).order_by('-created_at')[:5]
     devices_due_today = device_qs.filter(next_maintenance=today).count()
-    
+
     # Recent maintenance records
     recent_maintenance = Maintenance.objects.select_related('device').order_by('-date')[:5]
-    
+
     # System health calculation
     system_health = 87  # Default value, can be calculated based on device status
     if total_devices > 0:
         health_percentage = (active_devices / total_devices) * 100
         system_health = min(health_percentage, 100)
-    
+
     context = {
         # Counts
         'total_devices': total_devices,
@@ -550,21 +544,21 @@ def control_center(request):
         'inactive_devices': inactive_devices,
         'total_departments': total_departments,
         'critical_alerts': critical_alerts,
-        
+
         # For status strip
         'devices_normal': active_devices,
         'devices_pending': maintenance_devices,
         'devices_critical': critical_alerts,
-        
+
         # Critical zone data
         'overdue_maintenance': overdue_maintenance,
         'has_critical_alerts': critical_alerts > 0,
-        
+
         # System health
         'system_health': system_health,
         'mean_downtime': '2.3 hours',
         'avg_repair_time': '4.7 hours',
-        
+
         # Recent data
         'recent_maintenance': recent_maintenance,
         'todays_maintenance': todays_maintenance,
@@ -578,50 +572,26 @@ def control_center(request):
         'selected_device_type': selected_device_type,
         'selected_status': selected_status,
     }
-    
+
     return render(request, 'control_center.html', context)
 
-def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('control_center')  # توجيه إلى Control Center بدلاً من Dashboard
-    
-    if request.method == 'POST':
-        form = LoginForm(request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            user_model = get_user_model()
-            user, _ = user_model.objects.get_or_create(username=username)
-            login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            messages.success(request, 'Logged in successfully!')
-            return redirect('control_center')  # توجيه إلى Control Center
-        else:
-            messages.error(request, 'Invalid username or password')
-    else:
-        form = LoginForm()
 
-    return render(request, 'auth/login.html', {'form': form})
-
-from django.db.models import Count, Avg, Sum, F, Q
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from datetime import date, timedelta
-from .models import Device, Maintenance, Department
 
 @login_required
 def reports_view(request):
     """Comprehensive system reports view"""
-    
+
     # 1. Device Statistics
     total_devices = Device.objects.count()
     active_devices = Device.objects.filter(status='active').count()
     maintenance_devices = Device.objects.filter(status='maintenance').count()
     inactive_devices = Device.objects.filter(status='inactive').count()
-    
+
     # 2. Critical devices (overdue maintenance)
     today = date.today()
     critical_devices = 0
     overdue_maintenance = []
-    
+
     devices_with_maintenance = Device.objects.filter(next_maintenance__isnull=False)
     for device in devices_with_maintenance:
         if device.next_maintenance:
@@ -629,20 +599,20 @@ def reports_view(request):
             if delta.days < 0:  # Overdue
                 critical_devices += 1
                 overdue_maintenance.append(device)
-    
+
     # 3. Maintenance Statistics
     maintenance_stats = Maintenance.objects.aggregate(
         total_cost=Sum('cost'),
         avg_cost=Avg('cost'),
         total_records=Count('id')
     )
-    
+
     # 4. Recent Maintenance (last 30 days)
     thirty_days_ago = today - timedelta(days=30)
     recent_maintenance = Maintenance.objects.filter(
         date__gte=thirty_days_ago
     ).order_by('-date')
-    
+
     # 5. Department Statistics with detailed breakdown
     departments = Department.objects.annotate(
         device_count=Count('device'),
@@ -650,7 +620,7 @@ def reports_view(request):
         maintenance_count=Count('device', filter=Q(device__status='maintenance')),
         inactive_count=Count('device', filter=Q(device__status='inactive'))
     ).order_by('-device_count')
-    
+
     # 6. Device Type Distribution
     device_types = Device.objects.values('device_type').annotate(
         count=Count('id'),
@@ -658,44 +628,44 @@ def reports_view(request):
         maintenance=Count('id', filter=Q(status='maintenance')),
         inactive=Count('id', filter=Q(status='inactive'))
     ).order_by('-count')
-    
+
     # 7. Maintenance Type Distribution
     maintenance_types = Maintenance.objects.values('maintenance_type').annotate(
         count=Count('id'),
         avg_cost=Avg('cost'),
         total_cost=Sum('cost')
     ).order_by('-count')
-    
+
     # 8. Monthly Maintenance Trend (last 6 months)
     monthly_trend = []
     for i in range(5, -1, -1):
         month_start = today.replace(day=1) - timedelta(days=30*i)
         month_end = (month_start + timedelta(days=32)).replace(day=1) - timedelta(days=1)
-        
+
         month_maintenance = Maintenance.objects.filter(
             date__range=[month_start, month_end]
         ).aggregate(
             count=Count('id'),
             total_cost=Sum('cost')
         )
-        
+
         monthly_trend.append({
             'month': month_start.strftime('%b %Y'),
             'count': month_maintenance['count'] or 0,
             'cost': month_maintenance['total_cost'] or 0
         })
-    
+
     # 9. Top Technicians
     top_technicians = Maintenance.objects.values('technician').annotate(
         count=Count('id'),
         avg_cost=Avg('cost'),
         total_cost=Sum('cost')
     ).order_by('-count')[:5]
-    
+
     # 10. Warranty Status
     warranty_active = Device.objects.filter(warranty_expiry__gte=today).count()
     warranty_expired = Device.objects.filter(warranty_expiry__lt=today).count()
-    
+
     context = {
         # Device Stats
         'total_devices': total_devices,
@@ -703,48 +673,48 @@ def reports_view(request):
         'maintenance_devices': maintenance_devices,
         'inactive_devices': inactive_devices,
         'critical_devices': critical_devices,
-        
+
         # Maintenance Stats
         'maintenance_total_cost': maintenance_stats['total_cost'] or 0,
         'maintenance_avg_cost': maintenance_stats['avg_cost'] or 0,
         'maintenance_total_records': maintenance_stats['total_records'] or 0,
-        
+
         # Overdue Maintenance
         'overdue_maintenance': overdue_maintenance,
         'has_overdue_maintenance': len(overdue_maintenance) > 0,
-        
+
         # Department Stats
         'departments': departments,
         'total_departments': departments.count(),
-        
+
         # Device Type Stats
         'device_types': device_types,
-        
+
         # Maintenance Type Stats
         'maintenance_types': maintenance_types,
-        
+
         # Trends
         'monthly_trend': monthly_trend,
-        
+
         # Technicians
         'top_technicians': top_technicians,
-        
+
         # Warranty
         'warranty_active': warranty_active,
         'warranty_expired': warranty_expired,
         'warranty_percentage': (warranty_active / total_devices * 100) if total_devices > 0 else 0,
-        
+
         # Recent Maintenance
         'recent_maintenance': recent_maintenance[:10],
-        
+
         # Dates for filters
         'today': today,
         'thirty_days_ago': thirty_days_ago,
          'currency_symbol': 'EGP',
         'currency_code': 'EGP',
-        
+
     }
-    
+
     return render(request, 'reports.html', context)
 
 
@@ -771,7 +741,7 @@ def team_profile(request):
             'Research Methodology'
         ]
     }
-    
+
     # بيانات الفريق مع مسارات الصور
     team_members = [
         {
@@ -839,7 +809,7 @@ def team_profile(request):
             ]
         },
     ]
-    
+
     # معلومات المشروع
     project_info = {
         'name': 'DeviceCare - Intelligent Hospital Equipment Management',
@@ -867,7 +837,7 @@ def team_profile(request):
             'Historical data analysis and trends'
         ]
     }
-    
+
     # إحصائيات المشروع
     project_stats = {
         'code_lines': '15,000+',
@@ -876,7 +846,7 @@ def team_profile(request):
         'development_hours': '800+',
         'testing_coverage': '85%'
     }
-    
+
     context = {
         'supervisor': supervisor,
         'team_members': team_members,
@@ -884,14 +854,9 @@ def team_profile(request):
         'project_stats': project_stats,
         'active_page': 'team_profile'
     }
-    
+
     return render(request, 'team_profile.html', context)
 
-from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
-import qrcode
-import io
-from .models import Device
 
 def device_qr(request, pk):
     """Generate QR on-the-fly pointing to the current host + device URL."""
@@ -1006,17 +971,13 @@ def technician_sync_notes(request, maintenance_id):
 
 
 # ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
-from django.http import JsonResponse as _JsonResponse
-from django.views.decorators.http import require_GET as _require_GET
-from django.db import connection as _connection
-
-@_require_GET
+@require_GET
 def healthz(request):
     """Lightweight liveness + DB readiness probe. Used by Docker healthcheck."""
     try:
-        _connection.ensure_connection()
+        connection.ensureconnection()
         db_ok = True
     except Exception:
         db_ok = False
     payload = {"status": "ok" if db_ok else "degraded", "db": db_ok}
-    return _JsonResponse(payload, status=200 if db_ok else 503)
+    return JsonResponse(payload, status=200 if db_ok else 503)
