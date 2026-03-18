@@ -1,83 +1,441 @@
- <!-- templates/devices/add_edit.html -->
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
+{% load static %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title }} — DeviceCare{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Add / Edit Device Form ─────────────────────────────── */
+.form-page {
+  padding: 24px 0 48px;
+  min-height: calc(100vh - 80px);
+}
+
+.form-hero {
+  border-radius: 20px;
+  padding: 32px 36px;
+  margin-bottom: 28px;
+  color: #fff;
+  background: linear-gradient(135deg, #075985 0%, #0ea5e9 60%, #06b6d4 100%);
+  box-shadow: 0 14px 40px rgba(7,89,133,.30);
+  position: relative;
+  overflow: hidden;
+}
+
+.form-hero::after {
+  content: '';
+  position: absolute;
+  right: -60px; top: -60px;
+  width: 260px; height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.07);
+}
+
+.form-hero h1 {
+  font-size: 1.9rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 6px;
+  letter-spacing: -.03em;
+}
+
+.form-hero p {
+  opacity: .88;
+  margin: 0;
+  font-size: .95rem;
+  font-weight: 500;
+}
+
+/* Steps indicator */
+.form-steps {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.form-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border: 1.5px solid var(--c-border, rgba(14,116,144,.14));
+  background: var(--c-surface, #fff);
+  color: var(--c-muted, #64748b);
+  transition: all .2s ease;
+}
+
+.form-step.active {
+  background: #0369a1;
+  border-color: #0369a1;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(3,105,161,.28);
+}
+
+.form-step .step-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem;
+  flex-shrink: 0;
+}
+
+/* Section cards */
+.form-section {
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border, rgba(14,116,144,.14));
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(2,132,199,.08);
+  transition: box-shadow .2s ease;
+}
+
+.form-section:hover { box-shadow: 0 10px 30px rgba(2,132,199,.13); }
+
+.form-section-header {
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--c-border, rgba(14,116,144,.12));
+  background: var(--c-surface-2, #f8fafc);
+}
+
+.section-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.form-section-header h6 {
+  margin: 0;
+  font-size: .875rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+  color: var(--c-text, #0f172a);
+}
+
+.form-section-header p {
+  margin: 2px 0 0;
+  font-size: .78rem;
+  color: var(--c-muted, #64748b);
+}
+
+.form-section-body { padding: 24px; }
+
+/* Field labels */
+.form-section-body .form-label {
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--c-text-2, #334155);
+  margin-bottom: .35rem;
+}
+
+/* Required asterisk */
+.form-section-body .asteriskField {
+  color: #dc2626;
+  margin-left: 2px;
+}
+
+/* QR preview block */
+.qr-block {
+  background: var(--c-surface-2, #f8fafc);
+  border: 1px solid var(--c-border, rgba(14,116,144,.14));
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+.qr-block img {
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  border: 4px solid white;
+}
+
+/* Action bar */
+.form-actions {
+  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border, rgba(14,116,144,.14));
+  border-radius: 18px;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(2,132,199,.08);
+  position: sticky;
+  bottom: 20px;
+  z-index: 10;
+}
+
+/* Required fields legend */
+.required-note {
+  font-size: .78rem;
+  color: var(--c-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.required-note span { color: #dc2626; font-weight: 700; }
+
+/* Dark mode tweaks */
+[data-bs-theme="dark"] .form-section-header {
+  background: rgba(255,255,255,.03);
+}
+[data-bs-theme="dark"] .qr-block {
+  background: rgba(255,255,255,.04);
+}
+[data-bs-theme="dark"] .form-actions {
+  background: var(--c-surface, #0f172a);
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .form-hero { padding: 20px; }
+  .form-hero h1 { font-size: 1.4rem; }
+  .form-section-body { padding: 16px; }
+  .form-actions { flex-direction: column-reverse; align-items: stretch; }
+  .form-actions .btn { width: 100%; justify-content: center; }
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card shadow">
-            <div class="card-header bg-light">
-                <h4 class="mb-0"><i class="bi bi-cpu"></i> {{ title }}</h4>
+<div class="form-page">
+<div class="container-xxl">
+
+  <!-- Hero header -->
+  <div class="form-hero fade-in-up">
+    <h1>
+      <i class="bi bi-{% if device %}pencil-square{% else %}plus-circle{% endif %} me-2"></i>
+      {{ title }}
+    </h1>
+    <p>
+      {% if device %}
+        Editing <strong>{{ device.name }}</strong> · {{ device.device_id }}
+      {% else %}
+        Fill in the sections below to register a new device in the inventory.
+      {% endif %}
+    </p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <div class="row g-4">
+
+      <!-- LEFT column — main form sections -->
+      <div class="col-lg-8">
+
+        <!-- ① Identity -->
+        <div class="form-section fade-in-up" style="animation-delay:.06s">
+          <div class="form-section-header">
+            <div class="section-icon" style="background:rgba(3,105,161,.10);color:#0369a1">
+              <i class="bi bi-tag"></i>
             </div>
-            <div class="card-body">
-                <form method="post" enctype="multipart/form-data" novalidate>
-                    {% csrf_token %}
-                    
-                    <div class="row g-3">
-                        <!-- Basic Information -->
-                        <div class="col-md-6">
-                            <h6 class="border-bottom pb-2 mb-3">Basic Information</h6>
-                            {{ form.name|as_crispy_field }}
-                            {{ form.device_id|as_crispy_field }}
-                            {{ form.serial_number|as_crispy_field }}
-                            {{ form.device_type|as_crispy_field }}
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <h6 class="border-bottom pb-2 mb-3">Technical Details</h6>
-                            {{ form.manufacturer|as_crispy_field }}
-                            {{ form.model|as_crispy_field }}
-                            {{ form.purchase_date|as_crispy_field }}
-                            {{ form.warranty_expiry|as_crispy_field }}
-                        </div>
-                        
-                        <!-- Status and Location -->
-                        <div class="col-md-6">
-                            <h6 class="border-bottom pb-2 mb-3">Status & Location</h6>
-                            {{ form.status|as_crispy_field }}
-                            {{ form.department|as_crispy_field }}
-                            {{ form.location|as_crispy_field }}
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <h6 class="border-bottom pb-2 mb-3">Financial Information</h6>
-                            {{ form.price|as_crispy_field }}
-                            {{ form.last_maintenance|as_crispy_field }}
-                            {{ form.next_maintenance|as_crispy_field }}
-                        </div>
-                        
-                        <!-- Notes -->
-                        <div class="col-12">
-                            <h6 class="border-bottom pb-2 mb-3">Notes</h6>
-                            {{ form.notes|as_crispy_field }}
-                        </div>
-                    </div>
-                    
-<div class="d-flex justify-content-between mt-4">
-    <a href="{% url 'device_list' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i> Back
-    </a>
-    <button type="submit" class="btn btn-primary">
-        <i class="bi bi-save me-1"></i> Save
-    </button>
-</div>                </form>
+            <div>
+              <h6>Device Identity</h6>
+              <p>Name, ID, serial number, and classification</p>
             </div>
+          </div>
+          <div class="form-section-body">
+            <div class="row g-3">
+              <div class="col-md-12">{{ form.name|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.device_id|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.serial_number|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.device_type|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.status|as_crispy_field }}</div>
+            </div>
+          </div>
         </div>
-        
-        <!-- QR Code Preview -->
+
+        <!-- ② Manufacturer -->
+        <div class="form-section fade-in-up" style="animation-delay:.10s">
+          <div class="form-section-header">
+            <div class="section-icon" style="background:rgba(6,182,212,.10);color:#0891b2">
+              <i class="bi bi-building"></i>
+            </div>
+            <div>
+              <h6>Manufacturer & Model</h6>
+              <p>Brand, model designation, and technical specs</p>
+            </div>
+          </div>
+          <div class="form-section-body">
+            <div class="row g-3">
+              <div class="col-md-6">{{ form.manufacturer|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.model|as_crispy_field }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ③ Location -->
+        <div class="form-section fade-in-up" style="animation-delay:.14s">
+          <div class="form-section-header">
+            <div class="section-icon" style="background:rgba(5,150,105,.10);color:#059669">
+              <i class="bi bi-geo-alt"></i>
+            </div>
+            <div>
+              <h6>Location & Assignment</h6>
+              <p>Physical location and department assignment</p>
+            </div>
+          </div>
+          <div class="form-section-body">
+            <div class="row g-3">
+              <div class="col-md-6">{{ form.department|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.location|as_crispy_field }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ④ Financial & Dates -->
+        <div class="form-section fade-in-up" style="animation-delay:.18s">
+          <div class="form-section-header">
+            <div class="section-icon" style="background:rgba(217,119,6,.10);color:#d97706">
+              <i class="bi bi-calendar-check"></i>
+            </div>
+            <div>
+              <h6>Financial & Maintenance Dates</h6>
+              <p>Purchase price, warranty, and scheduled maintenance</p>
+            </div>
+          </div>
+          <div class="form-section-body">
+            <div class="row g-3">
+              <div class="col-md-6">{{ form.purchase_date|as_crispy_field }}</div>
+              <div class="col-md-6">{{ form.warranty_expiry|as_crispy_field }}</div>
+              <div class="col-md-4">{{ form.price|as_crispy_field }}</div>
+              <div class="col-md-4">{{ form.last_maintenance|as_crispy_field }}</div>
+              <div class="col-md-4">{{ form.next_maintenance|as_crispy_field }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑤ Notes -->
+        <div class="form-section fade-in-up" style="animation-delay:.22s">
+          <div class="form-section-header">
+            <div class="section-icon" style="background:rgba(139,92,246,.10);color:#7c3aed">
+              <i class="bi bi-journal-text"></i>
+            </div>
+            <div>
+              <h6>Notes</h6>
+              <p>Additional observations, known issues, or context</p>
+            </div>
+          </div>
+          <div class="form-section-body">
+            {{ form.notes|as_crispy_field }}
+          </div>
+        </div>
+
+      </div><!-- /left col -->
+
+      <!-- RIGHT column — status sidebar -->
+      <div class="col-lg-4">
+
         {% if device and device.qr_code %}
-        <div class="card shadow mt-4">
-            <div class="card-header bg-light">
-                <h6 class="mb-0"><i class="bi bi-qr-code"></i> Device QR Code</h6>
+        <!-- QR Code -->
+        <div class="form-section fade-in-up" style="animation-delay:.08s">
+          <div class="form-section-header">
+            <div class="section-icon" style="background:rgba(3,105,161,.10);color:#0369a1">
+              <i class="bi bi-qr-code"></i>
             </div>
-            <div class="card-body text-center">
-                <img src="{% url 'device_qr' device.pk %}" alt="QR Code" class="img-thumbnail" style="max-width: 200px;">
-                <p class="text-muted mt-2">This code can be scanned for quick access to device information</p>
+            <div>
+              <h6>Device QR Code</h6>
+              <p>Scan to open device record</p>
             </div>
+          </div>
+          <div class="form-section-body">
+            <div class="qr-block">
+              <img src="{% url 'device_qr' device.pk %}"
+                   alt="QR Code for {{ device.name }}"
+                   style="max-width:160px;width:100%">
+              <p class="mt-3 mb-2" style="font-size:.8rem;color:var(--c-muted)">
+                Unique to <strong>{{ device.device_id }}</strong>
+              </p>
+              <a href="{% url 'generate_device_qr' device.pk %}"
+                 class="btn btn-sm btn-outline-primary w-100">
+                <i class="bi bi-arrow-repeat me-1"></i>Regenerate
+              </a>
+            </div>
+          </div>
         </div>
         {% endif %}
+
+        <!-- Quick info card (edit mode) -->
+        {% if device %}
+        <div class="form-section fade-in-up" style="animation-delay:.12s">
+          <div class="form-section-header">
+            <div class="section-icon" style="background:rgba(6,182,212,.10);color:#0891b2">
+              <i class="bi bi-info-circle"></i>
+            </div>
+            <div><h6>Record Info</h6></div>
+          </div>
+          <div class="form-section-body">
+            <dl class="mb-0" style="font-size:.84rem">
+              <dt class="text-muted fw-600 small mb-1">Created</dt>
+              <dd class="mb-3">{{ device.created_at|date:"M j, Y H:i" }}</dd>
+              <dt class="text-muted fw-600 small mb-1">Last Updated</dt>
+              <dd class="mb-3">{{ device.updated_at|date:"M j, Y H:i" }}</dd>
+              <dt class="text-muted fw-600 small mb-1">TCO</dt>
+              <dd class="mb-0">
+                <strong class="text-brand">${{ device.total_cost_of_ownership|floatformat:0 }}</strong>
+              </dd>
+            </dl>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Tips card -->
+        <div class="form-section fade-in-up" style="animation-delay:.16s">
+          <div class="form-section-header">
+            <div class="section-icon" style="background:rgba(5,150,105,.10);color:#059669">
+              <i class="bi bi-lightbulb"></i>
+            </div>
+            <div><h6>Tips</h6></div>
+          </div>
+          <div class="form-section-body">
+            <ul class="mb-0 ps-3" style="font-size:.83rem;color:var(--c-text-2);line-height:1.8">
+              <li>Device ID must be <strong>unique</strong> across the system</li>
+              <li>Set <strong>Next Maintenance</strong> to trigger PM alerts</li>
+              <li>A QR code is generated automatically on save</li>
+              <li>Use <strong>Notes</strong> for known issues or special handling</li>
+            </ul>
+          </div>
+        </div>
+
+      </div><!-- /right col -->
+    </div><!-- /row -->
+
+    <!-- Sticky action bar -->
+    <div class="form-actions fade-in-up" style="animation-delay:.26s">
+      <div class="required-note">
+        <span>*</span> Required fields
+      </div>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="{% if device %}{% url 'device_detail' device.pk %}{% else %}{% url 'device_list' %}{% endif %}"
+           class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Cancel
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-{% if device %}check-lg{% else %}plus-lg{% endif %} me-1"></i>
+          {% if device %}Save Changes{% else %}Add Device{% endif %}
+        </button>
+      </div>
     </div>
+
+  </form>
+</div>
 </div>
 {% endblock %}

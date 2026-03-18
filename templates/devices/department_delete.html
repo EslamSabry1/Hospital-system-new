@@ -1,37 +1,112 @@
- <!-- templates/devices/department_delete.html -->
 {% extends 'base.html' %}
-
-{% block title %}Confirm Department Deletion{% endblock %}
+{% block title %}Delete {{ department.name }} — DeviceCare{% endblock %}
+{% block extra_css %}
+<style>
+.delete-page{padding:60px 0;min-height:calc(100vh - 80px);display:flex;align-items:center;}
+.delete-card{
+  max-width:520px;margin:0 auto;
+  background:var(--c-surface,#fff);
+  border:1px solid rgba(220,38,38,.22);
+  border-radius:22px;
+  box-shadow:0 14px 40px rgba(220,38,38,.10);
+  overflow:hidden;
+}
+.delete-header{
+  padding:24px 28px;text-align:center;
+  background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;
+}
+.delete-icon{
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;margin:0 auto 12px;
+}
+.delete-header h2{font-size:1.4rem;font-weight:800;color:#fff;margin:0;}
+.delete-body{padding:28px;}
+.info-row{
+  display:flex;justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid var(--c-border,rgba(14,116,144,.1));
+  font-size:.875rem;
+}
+.info-row:last-child{border-bottom:none;}
+.info-row dt{color:var(--c-muted);font-weight:600;}
+.info-row dd{margin:0;font-weight:700;}
+.delete-warning{
+  display:flex;align-items:flex-start;gap:10px;
+  background:rgba(220,38,38,.07);
+  border:1px solid rgba(220,38,38,.18);
+  border-radius:10px;padding:14px;margin:20px 0;
+  font-size:.85rem;
+}
+.delete-footer{
+  padding:16px 28px;
+  background:var(--c-surface-2,#f8fafc);
+  border-top:1px solid var(--c-border,rgba(14,116,144,.1));
+  display:flex;justify-content:flex-end;gap:10px;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-6">
-        <div class="card shadow">
-            <div class="card-header bg-danger text-white">
-                <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Confirm Department Deletion</h4>
-            </div>
-            <div class="card-body text-center py-5">
-                <i class="bi bi-layers fs-1 text-danger mb-4"></i>
-                <h4>Are you sure you want to delete this department?</h4>
-                <p class="text-muted mb-4">This action cannot be undone</p>
-                
-                <div class="alert alert-warning">
-                    <i class="bi bi-info-circle"></i>
-                    Department: <strong>{{ department.name }}</strong><br>
-                    Floor: <strong>{{ department.floor }}</strong>
-                </div>
-                
-                <form method="post" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger btn-lg">
-                        <i class="bi bi-check-circle"></i> Yes, Delete
-                    </button>
-                </form>
-                <a href="{% url 'departments_list' %}" class="btn btn-secondary btn-lg">
-                    <i class="bi bi-x-circle"></i> Cancel
-                </a>
-            </div>
-        </div>
+<div class="delete-page">
+<div class="container">
+<div class="delete-card fade-in-up">
+  <div class="delete-header">
+    <div class="delete-icon"><i class="bi bi-building-x"></i></div>
+    <h2>Delete Department</h2>
+    <p class="mb-0 mt-1" style="opacity:.85;font-size:.92rem">This action cannot be undone</p>
+  </div>
+
+  <div class="delete-body">
+    <dl class="mb-0">
+      <div class="info-row">
+        <dt>Department Name</dt><dd>{{ department.name }}</dd>
+      </div>
+      <div class="info-row">
+        <dt>Floor</dt><dd>Floor {{ department.floor }}</dd>
+      </div>
+      <div class="info-row">
+        <dt>Phone</dt><dd>{{ department.phone|default:"—" }}</dd>
+      </div>
+      <div class="info-row">
+        <dt>Assigned Devices</dt>
+        <dd>
+          <span class="fw-800 {% if department.device_set.count > 0 %}text-warning{% endif %}">
+            {{ department.device_set.count }}
+          </span>
+        </dd>
+      </div>
+    </dl>
+
+    {% if department.device_set.count > 0 %}
+    <div class="delete-warning">
+      <i class="bi bi-exclamation-triangle-fill text-danger mt-1 flex-shrink-0"></i>
+      <span>
+        This department has <strong>{{ department.device_set.count }} device(s)</strong> assigned.
+        They will become unassigned when the department is deleted.
+      </span>
     </div>
+    {% else %}
+    <div class="delete-warning">
+      <i class="bi bi-info-circle-fill text-danger mt-1 flex-shrink-0"></i>
+      <span>This department has no devices assigned and is safe to delete.</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="delete-footer">
+    <a href="{% url 'departments_list' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Cancel
+    </a>
+    <form method="post" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger px-4">
+        <i class="bi bi-trash3 me-1"></i>Delete Department
+      </button>
+    </form>
+  </div>
+</div>
+</div>
 </div>
 {% endblock %}

@@ -1,32 +1,88 @@
- <!-- templates/devices/department_form.html -->
 {% extends 'base.html' %}
 {% load crispy_forms_tags %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ title|default:"Department" }} — DeviceCare{% endblock %}
+
+{% block extra_css %}
+<style>
+.dept-form-page { padding: 32px 0 60px; }
+
+.dept-hero {
+  border-radius: 18px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
+  background: linear-gradient(135deg, #0e7490 0%, #0891b2 100%);
+  color: #fff;
+  box-shadow: 0 12px 36px rgba(14,116,144,.28);
+  position: relative; overflow: hidden;
+}
+.dept-hero::after {
+  content:'';position:absolute;right:-40px;top:-40px;
+  width:200px;height:200px;border-radius:50%;
+  background:rgba(255,255,255,.07);
+}
+.dept-hero h1 { font-size:1.65rem;font-weight:800;color:#fff;margin:0 0 4px; }
+.dept-hero p  { opacity:.88;margin:0;font-size:.92rem;font-weight:500; }
+
+.dept-form-card {
+  background: var(--c-surface,#fff);
+  border: 1px solid var(--c-border,rgba(14,116,144,.14));
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(2,132,199,.08);
+}
+.dept-form-card-header {
+  padding: 16px 24px;
+  background: var(--c-surface-2,#f8fafc);
+  border-bottom: 1px solid var(--c-border,rgba(14,116,144,.12));
+  display: flex; align-items:center; gap:10px;
+}
+.dept-form-card-header h5 { margin:0;font-size:.9rem;font-weight:700; }
+.dept-form-body { padding: 28px; }
+.dept-form-actions {
+  padding: 16px 28px;
+  background: var(--c-surface-2,#f8fafc);
+  border-top: 1px solid var(--c-border,rgba(14,116,144,.12));
+  display: flex; justify-content:flex-end; gap:10px;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-6">
-        <div class="card shadow">
-            <div class="card-header bg-light">
-                <h4 class="mb-0"><i class="bi bi-layers"></i> {{ title }}</h4>
-            </div>
-            <div class="card-body">
-                <form method="post" novalidate>
-                    {% csrf_token %}
-                    {{ form|crispy }}
-                    
-                    <div class="d-flex justify-content-between mt-4">
-                        <a href="{% url 'departments_list' %}" class="btn btn-secondary">
-                            <i class="bi bi-arrow-right"></i> Back
-                        </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save"></i> Save
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+<div class="dept-form-page">
+<div class="container" style="max-width:640px">
+
+  <div class="dept-hero fade-in-up">
+    <h1><i class="bi bi-layers me-2"></i>{{ title|default:"Department" }}</h1>
+    <p>Manage hospital department details</p>
+  </div>
+
+  <div class="dept-form-card fade-in-up" style="animation-delay:.07s">
+    <div class="dept-form-card-header">
+      <i class="bi bi-building text-brand"></i>
+      <h5>Department Details</h5>
     </div>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="dept-form-body">
+        <div class="row g-3">
+          <div class="col-12">{{ form.name|as_crispy_field }}</div>
+          <div class="col-md-6">{{ form.floor|as_crispy_field }}</div>
+          <div class="col-md-6">{{ form.phone|as_crispy_field }}</div>
+        </div>
+      </div>
+      <div class="dept-form-actions">
+        <a href="{% url 'departments_list' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Cancel
+        </a>
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-check-lg me-1"></i>Save Department
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
 </div>
 {% endblock %}

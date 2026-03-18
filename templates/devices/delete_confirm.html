@@ -1,37 +1,112 @@
- <!-- templates/devices/delete_confirm.html -->
 {% extends 'base.html' %}
+{% block title %}Delete {{ device.name }} — DeviceCare{% endblock %}
 
-{% block title %}Confirm Deletion{% endblock %}
+{% block extra_css %}
+<style>
+.delete-page{padding:60px 0;min-height:calc(100vh - 80px);display:flex;align-items:center;}
+.delete-card{
+  max-width:520px;margin:0 auto;
+  background:var(--c-surface,#fff);
+  border:1px solid rgba(220,38,38,.22);
+  border-radius:22px;
+  box-shadow:0 14px 40px rgba(220,38,38,.10);
+  overflow:hidden;
+}
+.delete-header{
+  padding:24px 28px;
+  background:linear-gradient(135deg,#dc2626,#b91c1c);
+  color:#fff;
+  text-align:center;
+}
+.delete-icon{
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(255,255,255,.15);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.8rem;margin:0 auto 12px;
+}
+.delete-header h2{font-size:1.4rem;font-weight:800;color:#fff;margin:0;}
+.delete-body{padding:28px;}
+.device-info-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;border-bottom:1px solid var(--c-border,rgba(14,116,144,.1));
+  font-size:.875rem;
+}
+.device-info-row:last-child{border-bottom:none;}
+.device-info-row dt{color:var(--c-muted);font-weight:600;}
+.device-info-row dd{margin:0;font-weight:700;text-align:right;}
+.delete-warning{
+  display:flex;align-items:flex-start;gap:10px;
+  background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.18);
+  border-radius:10px;padding:14px;margin:20px 0;font-size:.85rem;
+  color:var(--c-text);
+}
+.delete-footer{
+  padding:16px 28px;
+  background:var(--c-surface-2,#f8fafc);
+  border-top:1px solid var(--c-border,rgba(14,116,144,.1));
+  display:flex;justify-content:flex-end;gap:10px;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-6">
-        <div class="card shadow">
-            <div class="card-header bg-danger text-white">
-                <h4 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h4>
-            </div>
-            <div class="card-body text-center py-5">
-                <i class="bi bi-trash fs-1 text-danger mb-4"></i>
-                <h4>Are you sure you want to delete this device?</h4>
-                <p class="text-muted mb-4">This action cannot be undone</p>
-                
-                <div class="alert alert-warning">
-                    <i class="bi bi-info-circle"></i>
-                    Device: <strong>{{ device.name }}</strong><br>
-                    ID: <strong>{{ device.device_id }}</strong>
-                </div>
-                
-                <form method="post" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger btn-lg">
-                        <i class="bi bi-check-circle"></i> Yes, Delete
-                    </button>
-                </form>
-                <a href="{% url 'device_list' %}" class="btn btn-secondary btn-lg">
-                    <i class="bi bi-x-circle"></i> Cancel
-                </a>
-            </div>
-        </div>
+<div class="delete-page">
+<div class="container">
+<div class="delete-card fade-in-up">
+
+  <div class="delete-header">
+    <div class="delete-icon"><i class="bi bi-trash3"></i></div>
+    <h2>Delete Device</h2>
+    <p class="mb-0 mt-1" style="opacity:.85;font-size:.92rem">This action cannot be undone</p>
+  </div>
+
+  <div class="delete-body">
+    <dl class="mb-0">
+      <div class="device-info-row">
+        <dt>Device Name</dt>
+        <dd>{{ device.name }}</dd>
+      </div>
+      <div class="device-info-row">
+        <dt>Device ID</dt>
+        <dd><code>{{ device.device_id }}</code></dd>
+      </div>
+      <div class="device-info-row">
+        <dt>Department</dt>
+        <dd>{{ device.department|default:"Unassigned" }}</dd>
+      </div>
+      <div class="device-info-row">
+        <dt>Status</dt>
+        <dd>
+          <span class="badge-status badge-{{ device.status }}">
+            {{ device.get_status_display }}
+          </span>
+        </dd>
+      </div>
+    </dl>
+
+    <div class="delete-warning">
+      <i class="bi bi-exclamation-triangle-fill text-danger mt-1 flex-shrink-0"></i>
+      <span>
+        Deleting this device will permanently remove all associated
+        <strong>maintenance records</strong>, <strong>work orders</strong>,
+        and <strong>QR code</strong> from the system.
+      </span>
     </div>
+  </div>
+
+  <div class="delete-footer">
+    <a href="{% url 'device_detail' device.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Cancel
+    </a>
+    <form method="post" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger px-4">
+        <i class="bi bi-trash3 me-1"></i>Delete Permanently
+      </button>
+    </form>
+  </div>
+
+</div>
+</div>
 </div>
 {% endblock %}
