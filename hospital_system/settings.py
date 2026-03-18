@@ -2,32 +2,22 @@
 import os
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
-import socket
+from decouple import config, Csv
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
+# ── Security ────────────────────────────────────────────────────────────────
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-only-change-me')
+DEBUG = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost', cast=Csv())
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-your-secret-key-here-change-in-production'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-# ALLOWED_HOSTS مع تحديث للـ IP الجديد
-ALLOWED_HOSTS = [
-    "127.0.0.1",
-    "localhost",
-    "192.168.1.11",  # IP الجديد
-]
-
-# QR Codes للهوتسبوت
-HOTSPOT_IP = '192.168.137.1'
+# ── Network / QR ─────────────────────────────────────────────────────────────
+LOCAL_IP = config('LOCAL_IP', default='127.0.0.1')
+HOTSPOT_IP = config('HOTSPOT_IP', default='192.168.137.1')
 HOTSPOT_URL = f'http://{HOTSPOT_IP}:8000'
+BASE_URL = config('BASE_URL', default=f'http://{LOCAL_IP}:8000')
 
-# Application definition
+# ── Application definition ───────────────────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -35,19 +25,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Third party apps
     'crispy_forms',
     'crispy_bootstrap5',
-    
-    # Local apps
     'devices',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',  # For language switching
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -77,156 +63,99 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'hospital_system.wsgi.application'
 
+# ── Database ─────────────────────────────────────────────────────────────────
+DB_ENGINE = config('DB_ENGINE', default='django.db.backends.sqlite3')
 
-# Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if DB_ENGINE == 'django.db.backends.sqlite3':
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE,
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': DB_ENGINE,
+            'NAME': config('DB_NAME', default='hospital_db'),
+            'USER': config('DB_USER', default='hospital_user'),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': config('DB_HOST', default='db'),
+            'PORT': config('DB_PORT', default='5432'),
+        }
+    }
 
-
-# Password validation
-# https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
-
+# ── Password validation ───────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
-# Internationalization
-# =====================
-
-# Language settings
-LANGUAGE_CODE = 'en-us'  # Default language
-
-# Available languages
-LANGUAGES = [
-    ('en', _('English')),
-    ('ar', _('Arabic')),
-]
-
-# Locale paths for translation files
-LOCALE_PATHS = [
-    BASE_DIR / 'locale',
-]
-
-# Time zone for Egypt
+# ── Internationalisation ──────────────────────────────────────────────────────
+LANGUAGE_CODE = 'en-us'
+LANGUAGES = [('en', _('English')), ('ar', _('Arabic'))]
+LOCALE_PATHS = [BASE_DIR / 'locale']
 TIME_ZONE = 'Africa/Cairo'
+USE_I18N = True
+USE_L10N = False
+USE_TZ = True
+LANGUAGES_BIDI = ['ar']
 
-# Internationalization settings
-USE_I18N = True     # Enable internationalization
-USE_L10N = False    # Disable localization (we'll use custom formats)
-USE_TZ = True       # Enable timezone support
-
-# Date and time formats (English formats)
-DATE_FORMAT = 'F j, Y'                # December 15, 2024
-DATETIME_FORMAT = 'F j, Y H:i'        # December 15, 2024 14:30
-SHORT_DATE_FORMAT = 'm/d/Y'           # 12/15/2024
-SHORT_DATETIME_FORMAT = 'm/d/Y H:i'   # 12/15/2024 14:30
-TIME_FORMAT = 'H:i'                   # 14:30
-YEAR_MONTH_FORMAT = 'F Y'             # December 2024
-MONTH_DAY_FORMAT = 'F j'              # December 15
-
-# Number formatting
+DATE_FORMAT = 'F j, Y'
+DATETIME_FORMAT = 'F j, Y H:i'
+SHORT_DATE_FORMAT = 'm/d/Y'
+SHORT_DATETIME_FORMAT = 'm/d/Y H:i'
+TIME_FORMAT = 'H:i'
+YEAR_MONTH_FORMAT = 'F Y'
+MONTH_DAY_FORMAT = 'F j'
 USE_THOUSAND_SEPARATOR = True
 THOUSAND_SEPARATOR = ','
 DECIMAL_SEPARATOR = '.'
 NUMBER_GROUPING = 3
+FORMAT_MODULE_PATH = 'formats'
 
-# For Arabic RTL support
-LANGUAGES_BIDI = ["ar"]
-
-# Custom format module
-FORMAT_MODULE_PATH = 'hospital_system.formats'
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/4.2/howto/static-files/
-
+# ── Static & Media ────────────────────────────────────────────────────────────
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-
-# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
+# QR code directory — created at startup
+QR_CODE_DIR = MEDIA_ROOT / 'qr_codes'
+QR_CODE_URL = f'{BASE_URL}/media/qr_codes/'
+os.makedirs(QR_CODE_DIR, exist_ok=True)
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# ── Crispy Forms ──────────────────────────────────────────────────────────────
+CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
+CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
-# ============================================
-# إعدادات IP و BASE URL المحدثة
-# ============================================
-
-def get_local_ip():
-    """Get local IP address"""
-    try:
-        # Try to get local IP
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect(("8.8.8.8", 80))
-        ip = s.getsockname()[0]
-        s.close()
-        return ip
-    except:
-        return '127.0.0.1'
-
-# IP الحالي
-LOCAL_IP = '192.168.1.11'  # قمت بتعيينه يدوياً بناءً على طلبك
-
-# BASE URL الجديد - هذا هو الرابط الذي سيتم استخدامه في QR codes
-BASE_URL = f'http://{LOCAL_IP}:8000'
-
-# Crispy Forms Configuration
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"
-
-# Authentication URLs
+# ── Auth ──────────────────────────────────────────────────────────────────────
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
-# Admin language code (force English in admin)
-ADMIN_LANGUAGE_CODE = 'en-us'
-
-# Session settings (for language preference)
+# ── Sessions ──────────────────────────────────────────────────────────────────
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+SESSION_COOKIE_AGE = 1_209_600   # 2 weeks
 SESSION_SAVE_EVERY_REQUEST = True
 
-# ============================================
-# إعدادات إضافية للتعامل مع QR Codes
-# ============================================
-
-# إعدادات خاصة بـ QR Codes
-QR_CODE_DIR = MEDIA_ROOT / 'qr_codes'
-QR_CODE_URL = f'{BASE_URL}/media/qr_codes/'
-
-# تأكد من إنشاء مجلد QR codes إذا لم يكن موجوداً
-os.makedirs(QR_CODE_DIR, exist_ok=True)
-
-# Security settings (for production, you should configure these)
+# ── Security (production hardening) ──────────────────────────────────────────
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 31_536_000       # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_SSL_REDIRECT = True
+    X_FRAME_OPTIONS = 'DENY'
 else:
-    # Development settings
     INTERNAL_IPS = ['127.0.0.1']
+
+# ── Misc ──────────────────────────────────────────────────────────────────────
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+ADMIN_LANGUAGE_CODE = 'en-us'

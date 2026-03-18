@@ -3,6 +3,7 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    path('healthz/', views.healthz, name='healthz'),
     # ============================================
     # AUTHENTICATION URLs (المصادقة)
     # ============================================
@@ -89,4 +90,9 @@ urlpatterns = [
     
     # URL لعرض QR Code كصورة
     path('devices/<int:pk>/qr.png', views.device_qr, name='device_qr'),
+
+    # ============================================
+    # HEALTH CHECK (Docker / load balancer probe)
+    # ============================================
+    path('healthz/', views.healthz, name='healthz'),
 ]

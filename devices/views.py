@@ -22,6 +22,14 @@ from .scheduling import sync_calendar
 from .utils.prediction import compute_failure_prediction
 
 
+from django.http import HttpResponse as _HttpResponse
+
+def healthz(request):
+    """Lightweight liveness probe for Docker / load-balancer healthchecks."""
+    return _HttpResponse("ok", content_type="text/plain", status=200)
+
+
+
 
 @require_GET
 @login_required
@@ -995,3 +1003,20 @@ def technician_sync_notes(request, maintenance_id):
 
         messages.success(request, f'{len(offline_notes)} offline notes synced.')
     return redirect('technician_device', pk=work_order.device_id)
+
+
+# ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
+from django.http import JsonResponse as _JsonResponse
+from django.views.decorators.http import require_GET as _require_GET
+from django.db import connection as _connection
+
+@_require_GET
+def healthz(request):
+    """Lightweight liveness + DB readiness probe. Used by Docker healthcheck."""
+    try:
+        _connection.ensure_connection()
+        db_ok = True
+    except Exception:
+        db_ok = False
+    payload = {"status": "ok" if db_ok else "degraded", "db": db_ok}
+    return _JsonResponse(payload, status=200 if db_ok else 503)
