@@ -23,6 +23,8 @@ services:
     volumes:
       - media_files:/app/media
       - static_files:/app/staticfiles
+      - ./templates:/app/templates
+      - ./static:/app/static
     env_file:
       - .env
     environment:
