@@ -56,16 +56,24 @@ Open **http://localhost:8000** — log in with the superuser you just created.
 ## Local Development (virtualenv)
 
 ```bash
-python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\Activate.ps1
+./run-local.sh
+```
+
+The script will:
+1. Create `.venv` if needed
+2. Install dependencies from `requirements.txt`
+3. Create `.env` from `.env.example` with `DEBUG=True` (if missing)
+4. Run migrations
+5. Start the dev server on `http://127.0.0.1:8000`
+
+Manual equivalent:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate         # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# Minimal .env for dev
-echo "SECRET_KEY=dev-only-key\nDEBUG=True" > .env
-
+cp .env.example .env
 python manage.py migrate
-python manage.py createsuperuser
-python manage.py reset_db --yes   # optional: seed 5 depts + 5 devices
 python manage.py runserver
 ```
 
