@@ -51,6 +51,9 @@ if [ "$CURRENT_REQ_HASH" != "$STORED_REQ_HASH" ]; then
       echo "Django is not available (neither .venv nor system Python). Please ensure package index access and rerun."
       exit 1
     fi
+    # Avoid retrying a known-unavailable package index on every run.
+    # If requirements change, CURRENT_REQ_HASH will differ and trigger a fresh install attempt.
+    printf '%s' "$CURRENT_REQ_HASH" > "$REQ_STAMP"
     echo "Existing environment appears usable; continuing with current packages."
   fi
 fi
