@@ -37,7 +37,24 @@ fi
 
 if [ ! -f ".env" ]; then
   cp .env.example .env
-  sed -i 's/DEBUG=False/DEBUG=True/' .env
+fi
+
+set_env_value() {
+  local key="$1"
+  local value="$2"
+  if grep -Eq "^[[:space:]]*${key}=" .env; then
+    sed -i "s|^[[:space:]]*${key}=.*|${key}=${value}|" .env
+  else
+    printf '\n%s=%s\n' "$key" "$value" >> .env
+  fi
+}
+
+# Enforce local-safe defaults unless explicitly opted out.
+# This avoids local startup hanging on unavailable docker/postgres host "db".
+if [ "${RUN_LOCAL_KEEP_DB:-0}" != "1" ]; then
+  set_env_value "DEBUG" "True"
+  set_env_value "DB_ENGINE" "django.db.backends.sqlite3"
+  set_env_value "DB_HOST" "127.0.0.1"
 fi
 
 python manage.py migrate
