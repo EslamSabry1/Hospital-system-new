@@ -5,10 +5,30 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "python3 is required but was not found."
   exit 1
 fi
+SYSTEM_PYTHON="$(command -v python3)"
 
 if [ ! -d ".venv" ]; then
   python3 -m venv .venv
 fi
+
+ensure_venv_has_django() {
+  if python -c "import django" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if "$SYSTEM_PYTHON" -c "import django" >/dev/null 2>&1; then
+    echo "Rebuilding .venv with system site-packages so local startup can use preinstalled Django..."
+    deactivate >/dev/null 2>&1 || true
+    rm -rf .venv
+    "$SYSTEM_PYTHON" -m venv --system-site-packages .venv
+    # shellcheck disable=SC1091
+    source .venv/bin/activate
+    python -c "import django" >/dev/null 2>&1
+    return 0
+  fi
+
+  return 1
+}
 
 # shellcheck disable=SC1091
 source .venv/bin/activate
@@ -27,8 +47,8 @@ if [ "$CURRENT_REQ_HASH" != "$STORED_REQ_HASH" ]; then
     printf '%s' "$CURRENT_REQ_HASH" > "$REQ_STAMP"
   else
     echo "Dependency installation failed. Verifying existing environment..."
-    if ! python -c "import django" >/dev/null 2>&1; then
-      echo "Django is not available in .venv. Please ensure network/package index access and rerun."
+    if ! ensure_venv_has_django; then
+      echo "Django is not available (neither .venv nor system Python). Please ensure package index access and rerun."
       exit 1
     fi
     echo "Existing environment appears usable; continuing with current packages."
