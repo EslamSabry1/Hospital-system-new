@@ -5,7 +5,7 @@
 
 [![CI](https://github.com/EslamSabry1/Hospital-system-new/actions/workflows/ci.yml/badge.svg)](https://github.com/EslamSabry1/Hospital-system-new/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://python.org)
-[![Django 6](https://img.shields.io/badge/django-6.0-green.svg)](https://djangoproject.com)
+[![Django 5.2](https://img.shields.io/badge/django-5.2-green.svg)](https://djangoproject.com)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -167,5 +167,5 @@ static/css/style.css      # Global design tokens + component styles
 
 ## Tech Stack
 
-Django 6 · PostgreSQL · Bootstrap 5 · Chart.js · Docker · Gunicorn · python-decouple · openpyxl · qrcode · Pillow
+Django 5.2 · PostgreSQL · Bootstrap 5 · Chart.js · Docker · Gunicorn · python-decouple · openpyxl · qrcode · Pillow
 
