@@ -1,5 +1,5 @@
-# Python >=3.12 required (Django 6.x requirement)
-Django>=6.0,<7.0
+## Compatible with Python 3.11+ (stable Django LTS line)
+Django>=5.2,<5.3
 django-crispy-forms>=2.0
 crispy-bootstrap5>=2024.2
 Pillow>=10.0

@@ -5,7 +5,7 @@
 
 [![CI](https://github.com/EslamSabry1/Hospital-system-new/actions/workflows/ci.yml/badge.svg)](https://github.com/EslamSabry1/Hospital-system-new/actions)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://python.org)
-[![Django 6](https://img.shields.io/badge/django-6.0-green.svg)](https://djangoproject.com)
+[![Django 5.2](https://img.shields.io/badge/django-5.2-green.svg)](https://djangoproject.com)
 [![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
 
 ---
@@ -56,16 +56,24 @@ Open **http://localhost:8000** — log in with the superuser you just created.
 ## Local Development (virtualenv)
 
 ```bash
-python -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\Activate.ps1
+./run-local.sh
+```
+
+The script will:
+1. Create `.venv` if needed
+2. Install dependencies from `requirements.txt`
+3. Create `.env` from `.env.example` with `DEBUG=True` (if missing)
+4. Run migrations
+5. Start the dev server on `http://127.0.0.1:8000`
+
+Manual equivalent:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate         # Windows: .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# Minimal .env for dev
-echo "SECRET_KEY=dev-only-key\nDEBUG=True" > .env
-
+cp .env.example .env
 python manage.py migrate
-python manage.py createsuperuser
-python manage.py reset_db --yes   # optional: seed 5 depts + 5 devices
 python manage.py runserver
 ```
 
@@ -167,5 +175,5 @@ static/css/style.css      # Global design tokens + component styles
 
 ## Tech Stack
 
-Django 6 · PostgreSQL · Bootstrap 5 · Chart.js · Docker · Gunicorn · python-decouple · openpyxl · qrcode · Pillow
+Django 5.2 · PostgreSQL · Bootstrap 5 · Chart.js · Docker · Gunicorn · python-decouple · openpyxl · qrcode · Pillow
 
