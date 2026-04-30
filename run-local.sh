@@ -13,8 +13,27 @@ fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+REQ_FILE="requirements.txt"
+REQ_STAMP=".venv/.requirements.sha256"
+CURRENT_REQ_HASH="$(sha256sum "$REQ_FILE" | awk '{print $1}')"
+STORED_REQ_HASH=""
+if [ -f "$REQ_STAMP" ]; then
+  STORED_REQ_HASH="$(cat "$REQ_STAMP")"
+fi
+
+if [ "$CURRENT_REQ_HASH" != "$STORED_REQ_HASH" ]; then
+  echo "Installing Python dependencies..."
+  if python -m pip install -r "$REQ_FILE"; then
+    printf '%s' "$CURRENT_REQ_HASH" > "$REQ_STAMP"
+  else
+    echo "Dependency installation failed. Verifying existing environment..."
+    if ! python -c "import django" >/dev/null 2>&1; then
+      echo "Django is not available in .venv. Please ensure network/package index access and rerun."
+      exit 1
+    fi
+    echo "Existing environment appears usable; continuing with current packages."
+  fi
+fi
 
 if [ ! -f ".env" ]; then
   cp .env.example .env
