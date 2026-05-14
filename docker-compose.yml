@@ -25,15 +25,19 @@ services:
       - static_files:/app/staticfiles
       - ./templates:/app/templates
       - ./static:/app/static
-    env_file:
-      - .env
     environment:
-      - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=${DB_NAME:-hospital_db}
-      - DB_USER=${DB_USER:-hospital_user}
-      - DB_PASSWORD=${DB_PASSWORD:-changeme}
-      - DB_HOST=db
-      - DB_PORT=5432
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-dev-only-change-me}
+      DEBUG: ${DEBUG:-True}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-127.0.0.1,localhost}
+      LOCAL_IP: ${LOCAL_IP:-127.0.0.1}
+      HOTSPOT_IP: ${HOTSPOT_IP:-192.168.137.1}
+      BASE_URL: ${BASE_URL:-http://127.0.0.1:8000}
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: ${DB_NAME:-hospital_db}
+      DB_USER: ${DB_USER:-hospital_user}
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+      DB_HOST: db
+      DB_PORT: 5432
     depends_on:
       db:
         condition: service_healthy
