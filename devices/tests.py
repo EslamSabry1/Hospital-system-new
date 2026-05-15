@@ -7,8 +7,9 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
+from django.core.management import call_command
 from django.core.exceptions import ValidationError
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
@@ -148,6 +149,23 @@ class MaintenanceWorkOrderTests(TestCase):
         m.delete()
         self.device.refresh_from_db()
         self.assertEqual(self.device.status, 'active')
+
+
+# ─────────────────────────────────────────────────────────────
+# 1b. Management command tests — reset_db seed consistency
+# ─────────────────────────────────────────────────────────────
+
+@override_settings(DEBUG=True)
+class ResetDbCommandTests(TestCase):
+    def test_seeded_maintenance_records_are_completed_work_orders(self):
+        call_command('reset_db', yes=True, skip_migrate=True, verbosity=0)
+
+        seeded_statuses = list(
+            Maintenance.objects.order_by('device__device_id').values_list('status', 'completed')
+        )
+
+        self.assertEqual(len(seeded_statuses), 2)
+        self.assertEqual(seeded_statuses, [('completed', True), ('completed', True)])
 
 
 # ─────────────────────────────────────────────────────────────
