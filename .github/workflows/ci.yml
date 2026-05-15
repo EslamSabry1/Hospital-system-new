@@ -32,7 +32,15 @@ jobs:
       - name: Lint with ruff
         run: ruff check . --select E,W,F --ignore E501
 
-      - name: Run tests
+      - name: Check migration drift
+        env:
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          DEBUG: "True"
+          ALLOWED_HOSTS: localhost,127.0.0.1,testserver
+          DB_ENGINE: django.db.backends.sqlite3
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run tests and template rendering smoke checks
         env:
           SECRET_KEY: ci-test-secret-key-not-for-production
           DEBUG: "True"

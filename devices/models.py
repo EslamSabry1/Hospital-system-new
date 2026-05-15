@@ -161,6 +161,27 @@ class Device(models.Model):
             return 'Medium'
         return 'Low'
 
+    @property
+    def days_until_maintenance(self):
+        if not self.next_maintenance:
+            return None
+        return (self.next_maintenance - timezone.now().date()).days
+
+    @property
+    def is_maintenance_overdue(self):
+        days = self.days_until_maintenance
+        return days is not None and days < 0
+
+    @property
+    def is_maintenance_urgent(self):
+        days = self.days_until_maintenance
+        return days is not None and 0 <= days <= 3
+
+    @property
+    def days_overdue(self):
+        days = self.days_until_maintenance
+        return abs(days) if days is not None and days < 0 else 0
+
 class Maintenance(models.Model):
     MAINTENANCE_TYPE = [
         ('preventive', 'Preventive Maintenance'),
@@ -222,19 +243,40 @@ class Maintenance(models.Model):
 
     def clean(self):
         super().clean()
+
+    @classmethod
+    def status_rank(cls, status):
+        return cls.STATUS_SEQUENCE.get(status)
+
+    def get_persisted_status(self):
         if not self.pk:
+            return None
+        return Maintenance.objects.filter(pk=self.pk).values_list('status', flat=True).first()
+
+    def validate_status_transition(self, previous_status=None):
+        """Validate state transitions without relying on model.clean().
+
+        New work orders may be created in any valid status. Existing work orders
+        can move forward or remain unchanged, but they cannot move backwards.
+        Unknown statuses are ignored here because field choice validation reports
+        them more accurately during full_clean().
+        """
+        previous_status = self.get_persisted_status() if previous_status is None else previous_status
+        if not previous_status:
             return
 
-        previous = Maintenance.objects.filter(pk=self.pk).values_list('status', flat=True).first()
-        if not previous:
+        previous_rank = self.status_rank(previous_status)
+        current_rank = self.status_rank(self.status)
+        if previous_rank is None or current_rank is None:
             return
 
-        if self.STATUS_SEQUENCE[self.status] < self.STATUS_SEQUENCE[previous]:
+        if current_rank < previous_rank:
             raise ValidationError({'status': 'Status cannot move backwards in the work order flow.'})
 
     def save(self, *args, **kwargs):
         self.completed = self.status in {'completed', 'verified'}
         self.full_clean()
+        self.validate_status_transition()
         super().save(*args, **kwargs)
         self.device.sync_status_with_open_work_orders()
 

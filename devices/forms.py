@@ -44,6 +44,16 @@ class DepartmentForm(forms.ModelForm):
 
 
 class MaintenanceForm(forms.ModelForm):
+    def clean_status(self):
+        status = self.cleaned_data.get('status')
+        if self.instance and self.instance.pk:
+            try:
+                candidate = Maintenance(pk=self.instance.pk, status=status)
+                candidate.validate_status_transition(previous_status=self.instance.status)
+            except forms.ValidationError as exc:
+                raise forms.ValidationError(exc.message_dict.get('status', exc.messages)) from exc
+        return status
+
     class Meta:
         model = Maintenance
         exclude = ['assigned_technician', 'sla_deadline', 'photo_attachment', 'calibration_certificate']

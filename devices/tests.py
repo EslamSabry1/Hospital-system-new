@@ -13,6 +13,9 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from django.db.models.signals import post_migrate
+
+from .forms import MaintenanceForm
 from .models import Department, Device, Maintenance, TechnicianNote, PMTemplate, MaintenanceTask
 
 User = get_user_model()
@@ -89,6 +92,55 @@ class MaintenanceWorkOrderTests(TestCase):
         m.status = 'assigned'
         with self.assertRaises(ValidationError):
             m.save()
+
+
+    def test_creation_allows_each_valid_status_without_transition_lookup(self):
+        for status, _label in Maintenance.WORK_ORDER_STATUS:
+            with self.subTest(status=status):
+                device = make_device(
+                    department=self.department,
+                    device_id=f'MON-{status}',
+                    serial_number=f'SER-{status}',
+                    status='active',
+                )
+                maintenance = make_maintenance(device, status=status)
+                self.assertEqual(maintenance.status, status)
+                self.assertEqual(maintenance.completed, status in {'completed', 'verified'})
+
+    def test_status_can_stay_same_or_move_forward(self):
+        m = make_maintenance(self.device, status='assigned')
+        m.status = 'assigned'
+        m.save()
+        m.status = 'in_progress'
+        m.save()
+        self.assertEqual(m.status, 'in_progress')
+
+    def test_form_rejects_backward_transition_before_save(self):
+        m = make_maintenance(self.device, status='completed')
+        form = MaintenanceForm(data={
+            'device': self.device.pk,
+            'maintenance_type': m.maintenance_type,
+            'date': m.date,
+            'technician': m.technician,
+            'cost': m.cost,
+            'description': m.description,
+            'notes': m.notes,
+            'status': 'in_progress',
+            'completed': m.completed,
+            'technician_signature': m.technician_signature,
+            'started_at': m.started_at,
+            'stopped_at': m.stopped_at,
+            'next_maintenance_date': m.next_maintenance_date,
+        }, instance=m)
+        self.assertFalse(form.is_valid())
+        self.assertIn('status', form.errors)
+
+    def test_invalid_status_uses_choice_validation_not_key_error(self):
+        m = make_maintenance(self.device, status='assigned')
+        m.status = 'not-a-status'
+        with self.assertRaises(ValidationError) as cm:
+            m.save()
+        self.assertIn('status', cm.exception.message_dict)
 
     def test_sla_breach_indicator_open(self):
         m = make_maintenance(
@@ -341,6 +393,44 @@ class AuthenticatedViewTests(TestCase):
     def test_reports_view_returns_200(self):
         r = self.client.get(reverse('reports'))
         self.assertEqual(r.status_code, 200)
+
+
+    def test_dashboard_returns_200_with_complete_context(self):
+        due = make_device(
+            department=self.department,
+            device_id='DASH-DUE',
+            serial_number='DASH-SER-DUE',
+            next_maintenance=timezone.now().date() - timedelta(days=2),
+        )
+        r = self.client.get(reverse('dashboard'))
+        self.assertEqual(r.status_code, 200)
+        self.assertTemplateUsed(r, 'dashboard.html')
+        for key in ['active_percentage', 'maintenance_percentage', 'inactive_percentage', 'recent_devices', 'upcoming_maintenance']:
+            self.assertIn(key, r.context)
+        self.assertContains(r, due.name)
+
+    def test_reports_monthly_trend_includes_avg_cost(self):
+        make_maintenance(self.device, status='completed', cost='50.00')
+        r = self.client.get(reverse('reports'))
+        self.assertEqual(r.status_code, 200)
+        self.assertTrue(all('avg_cost' in month for month in r.context['monthly_trend']))
+
+    def test_dashboard_and_reports_templates_render_with_empty_database(self):
+        Maintenance.objects.all().delete()
+        Device.objects.all().delete()
+        Department.objects.all().delete()
+        for url_name, template_name in [('dashboard', 'dashboard.html'), ('reports', 'reports.html')]:
+            with self.subTest(url_name=url_name):
+                r = self.client.get(reverse(url_name))
+                self.assertEqual(r.status_code, 200)
+                self.assertTemplateUsed(r, template_name)
+
+    def test_post_migrate_does_not_register_sample_data_receiver(self):
+        receiver_names = {
+            getattr(receiver, '__name__', '')
+            for receiver in post_migrate._live_receivers(sender=None)[0]
+        }
+        self.assertNotIn('create_sample_data', receiver_names)
 
     def test_healthz_returns_200_unauthenticated(self):
         """Health probe must be reachable — returns 200 (ok) or 503 (DB degraded)."""
