@@ -186,10 +186,42 @@ def logout_view(request):
     return redirect('login')
 
 
+def build_dashboard_context():
+    today = timezone.now().date()
+    total_devices = Device.objects.count()
+    active_devices = Device.objects.filter(status='active').count()
+    maintenance_devices = Device.objects.filter(status='maintenance').count()
+    inactive_devices = Device.objects.filter(status='inactive').count()
+
+    def percentage(count):
+        return (count / total_devices * 100) if total_devices else 0
+
+    upcoming_cutoff = today + timedelta(days=30)
+    upcoming_maintenance = (
+        Device.objects.select_related('department')
+        .filter(next_maintenance__isnull=False, next_maintenance__lte=upcoming_cutoff)
+        .order_by('next_maintenance', 'name')
+    )
+
+    return {
+        'total_devices': total_devices,
+        'active_devices': active_devices,
+        'maintenance_devices': maintenance_devices,
+        'inactive_devices': inactive_devices,
+        'total_departments': Department.objects.count(),
+        'active_percentage': percentage(active_devices),
+        'maintenance_percentage': percentage(maintenance_devices),
+        'inactive_percentage': percentage(inactive_devices),
+        'recent_devices': Device.objects.select_related('department').order_by('-created_at')[:5],
+        'upcoming_maintenance': upcoming_maintenance,
+        'today': today,
+    }
+
+
 @login_required
 def dashboard(request):
-    """Legacy dashboard endpoint now points to the unified cockpit."""
-    return redirect('control_center')
+    """Render the dashboard with a complete, template-safe context."""
+    return render(request, 'dashboard.html', build_dashboard_context())
 
 
 @login_required
@@ -642,13 +674,15 @@ def reports_view(request):
             date__range=[month_start, month_end]
         ).aggregate(
             count=Count('id'),
-            total_cost=Sum('cost')
+            total_cost=Sum('cost'),
+            avg_cost=Avg('cost')
         )
 
         monthly_trend.append({
             'month': month_start.strftime('%b %Y'),
             'count': month_maintenance['count'] or 0,
-            'cost': month_maintenance['total_cost'] or 0
+            'cost': month_maintenance['total_cost'] or 0,
+            'avg_cost': month_maintenance['avg_cost'] or 0,
         })
 
     # 9. Top Technicians
@@ -698,7 +732,7 @@ def reports_view(request):
         # Warranty
         'warranty_active': warranty_active,
         'warranty_expired': warranty_expired,
-        'warranty_percentage': (warranty_active / total_devices * 100) if total_devices > 0 else 0,
+        'warranty_percentage': min(max((warranty_active / total_devices * 100) if total_devices > 0 else 0, 0), 100),
 
         # Recent Maintenance
         'recent_maintenance': recent_maintenance[:10],

@@ -232,6 +232,7 @@
 }
 .warranty-progress-bar {
     height: 100%;
+    width: var(--warranty-percentage, 0%);
     background: linear-gradient(90deg, var(--app-success), var(--success-700));
     border-radius: 15px;
     transition: width 1s ease;
@@ -502,10 +503,8 @@
             <div class="col-md-6">
                 <div class="card border-0 p-4 h-100" style="background: var(--bg-surface);">
                     <h6 class="text-muted mb-3">Warranty Coverage</h6>
-                    <div class="warranty-progress">
-<div class="warranty-progress" style="--warranty: {{ warranty_percentage|floatformat:0 }}%;">
-  <div class="warranty-progress-bar">{{ warranty_percentage|floatformat:0 }}%</div>
-</div>
+                    <div class="warranty-progress" style="--warranty-percentage: {{ warranty_percentage|default:0|floatformat:0 }}%;">
+                        <div class="warranty-progress-bar">{{ warranty_percentage|default:0|floatformat:0 }}%</div>
                     </div>
                     <div class="row mt-3">
                         <div class="col-6">
