@@ -161,18 +161,6 @@ static/css/style.css      # Global design tokens + component styles
 
 ---
 
-## Team
-
-| Name | Role |
-|---|---|
-| Yousef Mohamed Ahmed | Team Lead & Full-Stack Developer |
-| Eslam Mohamed Sabry | Frontend Developer & UI Specialist |
-| Hamsa Samir | AI Integration & Data Analytics |
-
-**Supervisor:** Eng. Lamia Nabil Mahdy — Biomedical Engineering Department, HTI
-
----
-
 ## Tech Stack
 
 Django 5.2 · PostgreSQL · Bootstrap 5 · Chart.js · Docker · Gunicorn · python-decouple · openpyxl · qrcode · Pillow

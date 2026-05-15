@@ -25,9 +25,6 @@ from .scheduling import sync_calendar
 from .utils.prediction import compute_failure_prediction
 
 
-
-
-
 @require_GET
 @login_required
 def control_center_stats_api(request):
@@ -576,7 +573,6 @@ def control_center(request):
     return render(request, 'control_center.html', context)
 
 
-
 @login_required
 def reports_view(request):
     """Comprehensive system reports view"""
@@ -716,146 +712,6 @@ def reports_view(request):
     }
 
     return render(request, 'reports.html', context)
-
-
-
-
-@login_required
-def team_profile(request):
-    # بيانات المشرف مع مسار الصورة
-    supervisor = {
-        'name': 'Dr. Lamia Nabil Mahdy',
-        'title': 'Project Supervisor & Technical Advisor',
-        'department': 'Biomedical Engineering Department',
-        'institution': 'Higher Technological Institute',
-        'email': 'lamia.nabil@hti.edu.eg',
-        'phone': '+20 100 202 8806',
-        'photo': 'img/supervisor.png',  # مسار الصورة في مجلد static/img/
-        'bio': 'Provides technical guidance on medical equipment standards and healthcare regulations. Oversees project alignment with industry requirements and academic standards.',
-        'expertise': [
-            'Healthcare Technology Standards',
-            'Medical Device Regulations',
-            'System Architecture Review',
-            'Academic Project Supervision',
-            'Industry Best Practices',
-            'Research Methodology'
-        ]
-    }
-
-    # بيانات الفريق مع مسارات الصور
-    team_members = [
-        {
-            'name': 'Yousef Mohamed Ahmed Elsayed',
-            'role': 'Team Lead & Full Stack Developer',
-            'email': 'yousef_mohamed2001@yahoo.com',
-            'photo': 'img/yousef.png',  # مسار الصورة
-            'bio': 'Biomedical Engineering student leading the DeviceCare project. Combines medical equipment expertise with full-stack development skills to bridge healthcare and technology.',
-            'skills': [
-                'Django Backend Development',
-                'Medical Equipment APIs',
-                'Project Management',
-                'System Architecture',
-                'Database Design',
-                'Team Leadership',
-                'Client Communication'
-            ],
-            'experience': [
-                'Medical equipment maintenance training',
-                'ICU/OR device specialization',
-                'Clinical engineering background'
-            ]
-        },
-        {
-            'name': 'Eslam Mohamed Sabry Ali',
-            'role': 'Frontend Developer & UI Specialist',
-            'email': 'eslamsabry086@gmail.com',
-            'photo': 'img/eslam.png',  # مسار الصورة
-            'bio': 'Specialized in creating intuitive user interfaces for medical systems. Focuses on user experience and responsive design for healthcare applications.',
-            'skills': [
-                'HTML/CSS/Bootstrap',
-                'JavaScript Frontend',
-                'UI/UX Design',
-                'Responsive Web Design',
-                'Technical Documentation',
-                'Quality Assurance',
-                'User Testing'
-            ],
-            'experience': [
-                'Endoscopy equipment training',
-                'Technical documentation',
-                'Quality assurance processes'
-            ]
-        },
-        {
-            'name': 'Hamsa Samir',
-            'role': 'AI Integration & Data Analytics',
-            'email': 'hamsasamir96@gmail.com',
-            'photo': 'img/hamsa.png',  # مسار الصورة
-            'linkedin': 'https://www.linkedin.com/in/hamsa-samir-a14b03263',
-            'bio': 'Handles machine learning models and data analytics for predictive maintenance. Integrates AI algorithms with medical equipment monitoring systems.',
-            'skills': [
-                'Machine Learning Integration',
-                'Data Analytics & Visualization',
-                'Predictive Algorithms',
-                'API Integration',
-                'Performance Optimization',
-                'Technical Presentations',
-                'System Testing'
-            ],
-            'experience': [
-                'Machine Learning certification',
-                'Medical imaging systems',
-                'Research and development'
-            ]
-        },
-    ]
-
-    # معلومات المشروع
-    project_info = {
-        'name': 'DeviceCare - Intelligent Hospital Equipment Management',
-        'description': 'A comprehensive web-based platform for managing hospital medical equipment with intelligent monitoring, predictive maintenance, and real-time analytics. Built using modern web technologies with a focus on user experience and system reliability.',
-        'year': '2026',
-        'field': 'Biomedical Engineering & Web Development',
-        'technologies': [
-            'Django 4.2 (Backend Framework)',
-            'PostgreSQL (Database)',
-            'Bootstrap 5 (Frontend)',
-            'JavaScript/Chart.js (Visualization)',
-            'RESTful APIs',
-            'Docker (Containerization)',
-            'Machine Learning Models',
-            'WebSockets (Real-time updates)'
-        ],
-        'features': [
-            'Real-time equipment status dashboard',
-            'Predictive maintenance scheduling with ML',
-            'Interactive equipment tracking maps',
-            'Comprehensive analytics and reporting',
-            'Multi-role user access control',
-            'Mobile-responsive web interface',
-            'Automated alert and notification system',
-            'Historical data analysis and trends'
-        ]
-    }
-
-    # إحصائيات المشروع
-    project_stats = {
-        'code_lines': '15,000+',
-        'api_endpoints': '45+',
-        'database_tables': '25+',
-        'development_hours': '800+',
-        'testing_coverage': '85%'
-    }
-
-    context = {
-        'supervisor': supervisor,
-        'team_members': team_members,
-        'project_info': project_info,
-        'project_stats': project_stats,
-        'active_page': 'team_profile'
-    }
-
-    return render(request, 'team_profile.html', context)
 
 
 def device_qr(request, pk):
