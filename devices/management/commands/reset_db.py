@@ -105,6 +105,8 @@ class Command(BaseCommand):
 
         self.stdout.write(f'  ✅ {len(created_devices)} devices created')
 
+        # Seed closed work orders with both status and completed set so
+        # Maintenance.save() keeps the denormalized flag consistent.
         maintenance_data = [
             dict(device=created_devices[2], maintenance_type='preventive', date=today - timedelta(days=30),
                  technician='Ahmed Mohamed', assigned_technician='Ahmed Mohamed', cost=1500,
