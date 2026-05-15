@@ -19,11 +19,6 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),  # Dashboard التقليدي
 
     # ============================================
-    # TEAM PROFILE URL (ملف الفريق) - أضف هذا السطر
-    # ============================================
-    path('team-profile/', views.team_profile, name='team_profile'),
-
-    # ============================================
     # DEVICES MANAGEMENT URLs (إدارة الأجهزة)
     # ============================================
     # قائمة الأجهزة

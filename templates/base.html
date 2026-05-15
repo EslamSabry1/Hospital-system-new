@@ -199,10 +199,6 @@
         color: #d6d1ed !important;
     }
 
-    .theme-switch-label {
-        background: rgba(255, 255, 255, 0.12);
-        border-color: rgba(255, 255, 255, 0.4);
-    }
 
     .form-control:focus,
     .form-select:focus {
@@ -213,6 +209,136 @@
     .container > .alert {
         border-left: 4px solid rgb(var(--app-primary-rgb)) !important;
     }
+
+    .topbar-actions {
+        gap: 0.75rem;
+    }
+
+    .theme-switch-wrapper {
+        display: flex;
+        align-items: center;
+    }
+
+    .theme-switch {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .theme-switch-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        min-height: 42px;
+        margin: 0;
+        padding: 0.45rem 0.8rem;
+        color: #f8fafc;
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .theme-switch-label:hover,
+    .theme-switch:focus-visible + .theme-switch-label {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.48);
+        transform: translateY(-1px);
+    }
+
+    .theme-switch-label .bi-sun-fill,
+    .theme-switch:checked + .theme-switch-label .bi-moon-stars-fill {
+        display: inline-flex;
+    }
+
+    .theme-switch-label .bi-moon-stars-fill,
+    .theme-switch:checked + .theme-switch-label .bi-sun-fill {
+        display: none;
+    }
+
+    .theme-switch-text {
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+    }
+
+    .user-menu-toggle {
+        gap: 0.65rem;
+        padding: 0.35rem 0.75rem 0.35rem 0.4rem !important;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .user-menu-toggle:hover,
+    .user-menu-toggle.show {
+        background: rgba(var(--app-primary-rgb), 0.5);
+        border-color: rgba(255, 255, 255, 0.44);
+    }
+
+    .user-avatar {
+        width: 38px;
+        height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 38px;
+        color: #083344;
+        font-weight: 800;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #e0f2fe, #67e8f9);
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.55), 0 8px 18px rgba(0,0,0,0.18);
+    }
+
+    .user-info {
+        line-height: 1.1;
+    }
+
+    .user-name {
+        font-size: 0.9rem;
+        font-weight: 700;
+    }
+
+    .user-role {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-top: 0.15rem;
+        color: #bae6fd !important;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .dropdown-menu-end {
+        margin-top: 0.7rem;
+        padding: 0.55rem;
+        min-width: 13rem;
+    }
+
+    .dropdown-item {
+        border-radius: 0.7rem;
+        font-weight: 600;
+    }
+
+    @media (max-width: 991.98px) {
+        .topbar-actions {
+            align-items: stretch !important;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+
+        .theme-switch-label,
+        .user-menu-toggle {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
+
 </style>
 
 <script>
@@ -350,16 +476,16 @@ document.addEventListener('DOMContentLoaded', function() {
             </ul>
 
             <!-- Right Side Controls -->
-            <ul class="navbar-nav align-items-center">
+            <ul class="navbar-nav align-items-center topbar-actions">
                 
                 <!-- Theme Switcher -->
-                <li class="nav-item me-3">
+                <li class="nav-item">
                     <div class="theme-switch-wrapper">
-                        <input type="checkbox" class="theme-switch" id="themeSwitch">
-                        <label for="themeSwitch" class="theme-switch-label">
-                            <i class="bi bi-sun-fill"></i>
-                            <i class="bi bi-moon-fill"></i>
-                            <div class="theme-switch-ball"></div>
+                        <input type="checkbox" class="theme-switch" id="themeSwitch" aria-label="Toggle night mode">
+                        <label for="themeSwitch" class="theme-switch-label" title="Toggle night mode">
+                            <i class="bi bi-sun-fill" aria-hidden="true"></i>
+                            <i class="bi bi-moon-stars-fill" aria-hidden="true"></i>
+                            <span class="theme-switch-text">Night mode</span>
                         </label>
                     </div>
                 </li>
@@ -368,32 +494,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% if user.is_authenticated %}
                 <li class="nav-item dropdown">
                     
-                    <a class="nav-link dropdown-toggle d-flex align-items-center" 
-                       href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle user-menu-toggle d-flex align-items-center" 
+                       href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <div class="user-avatar">
                             <span>{{ user.username|first|upper }}</span>
                         </div>
                         <div class="user-info d-none d-lg-flex flex-column">
                             <span class="user-name">{{ user.username }}</span>
-                            <span class="user-role">Administrator</span>
+                            <span class="user-role"><i class="bi bi-shield-check" aria-hidden="true"></i> Administrator</span>
                         </div>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
                             <h6 class="dropdown-header">Account</h6>
                         </li>
-                            <!-- في base.html -->
                         <li>
-                            <a class="dropdown-item d-flex align-items-center {% if request.resolver_match.url_name == 'team_profile' %}active{% endif %}" 
-                               href="{% url 'team_profile' %}">
-                                <i class="bi bi-people me-2"></i>
-                                <span>Team</span>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="{% url 'admin:index' %}" target="_blank">
-                                <i class="bi bi-shield-check me-2"></i>
+                            <a class="dropdown-item d-flex align-items-center" href="{% url 'admin:index' %}" target="_blank" rel="noopener">
+                                <i class="bi bi-shield-lock me-2"></i>
                                 <span>Admin Panel</span>
                             </a>
                         </li>
@@ -491,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span class="text-info fw-semibold">Biomedical Engineering 2026 ⚡🩺</span>
                 </div>
                 <small class="text-muted d-block mt-2">
-                    Made with <i class="bi bi-heart-fill text-danger"></i> by DeviceCare Team
+                    Built for smarter hospital equipment care
                 </small>
             </div>
             
@@ -582,8 +699,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'Alt+1': "{% url 'control_center_dash' %}",
         'Alt+2': "{% url 'device_list' %}",
         'Alt+3': "{% url 'departments_list' %}",
-        'Alt+4': "{% url 'team_profile' %}",
-        'Alt+5': "{% url 'procurement_dashboard' %}"
+        'Alt+4': "{% url 'procurement_dashboard' %}"
     };
 
     document.addEventListener('keydown', function(event) {
