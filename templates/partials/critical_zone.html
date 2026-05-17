@@ -1,0 +1,13 @@
+{% if overdue_maintenance %}
+<div class="critical-list" id="critical-list">
+    {% for device in overdue_maintenance|slice:":3" %}
+    <div class="critical-item">
+        <span class="device-name">{{ device.name }} ({{ device.device_id }})</span>
+        <span class="issue">Overdue: {{ device.days_overdue }} days</span>
+        <span class="time">Due: {{ device.next_maintenance|date:"M d, Y" }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted text-center py-3">No critical alerts at this time.</p>
+{% endif %}

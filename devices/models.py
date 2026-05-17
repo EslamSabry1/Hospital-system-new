@@ -279,6 +279,26 @@ class Maintenance(models.Model):
         self.validate_status_transition()
         super().save(*args, **kwargs)
         self.device.sync_status_with_open_work_orders()
+        self._broadcast_status_change()
+
+    def _broadcast_status_change(self):
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    'device_status',
+                    {
+                        'type': 'device_changed',
+                        'device_id': self.device.device_id,
+                        'device_name': self.device.name,
+                        'new_status': self.device.status,
+                        'maintenance_status': self.status,
+                    }
+                )
+        except Exception:
+            pass
 
     def delete(self, *args, **kwargs):
         device = self.device

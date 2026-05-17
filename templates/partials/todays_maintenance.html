@@ -1,0 +1,21 @@
+<div class="maintenance-list" id="todays-maintenance-list">
+    {% for maintenance in todays_maintenance %}
+    <div class="maintenance-item">
+        <div class="maintenance-icon"><i class="bi bi-tools"></i></div>
+        <div class="maintenance-details">
+            <div class="maintenance-device">{{ maintenance.device.name }}</div>
+            <div class="maintenance-info">
+                <span><i class="bi bi-person"></i> {{ maintenance.technician|default:"Technician" }}</span>
+                <span><i class="bi bi-tag"></i> {{ maintenance.get_maintenance_type_display }}</span>
+                <span><i class="bi bi-cash"></i> EGP {{ maintenance.cost }}</span>
+            </div>
+        </div>
+        <div class="maintenance-date">{{ maintenance.date|date:"M d, Y" }}</div>
+    </div>
+    {% empty %}
+    <div class="text-center py-4">
+        <i class="bi bi-calendar-check display-6 text-muted"></i>
+        <p class="mt-3 text-muted">No maintenance records for today</p>
+    </div>
+    {% endfor %}
+</div>

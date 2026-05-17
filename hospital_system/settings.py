@@ -1,6 +1,7 @@
 # hospital_system/settings.py
 import os
 from pathlib import Path
+from importlib.util import find_spec
 from django.utils.translation import gettext_lazy as _
 from decouple import config, Csv
 
@@ -18,7 +19,16 @@ HOTSPOT_URL = f'http://{HOTSPOT_IP}:8000'
 BASE_URL = config('BASE_URL', default=f'http://{LOCAL_IP}:8000')
 
 # ── Application definition ───────────────────────────────────────────────────
+OPTIONAL_INSTALLED_APPS = [
+    'daphne',
+    'rest_framework',
+    'django_filters',
+]
+
 INSTALLED_APPS = [
+    app for app in OPTIONAL_INSTALLED_APPS
+    if find_spec(app) is not None
+] + [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -29,6 +39,23 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'devices',
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 25,
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -159,3 +186,17 @@ else:
 # ── Misc ──────────────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 ADMIN_LANGUAGE_CODE = 'en-us'
+
+ASGI_APPLICATION = 'hospital_system.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(
+                config('REDIS_HOST', default='127.0.0.1'),
+                config('REDIS_PORT', default=6379, cast=int),
+            )],
+        },
+    },
+}

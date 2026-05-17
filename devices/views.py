@@ -861,6 +861,66 @@ def technician_sync_notes(request, maintenance_id):
 
 
 # ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
+
+@require_GET
+@login_required
+def htmx_stats_strip(request):
+    from datetime import date, timedelta
+    from django.db.models import Q
+    today = date.today()
+    active_devices = Device.objects.filter(status='active').count()
+    maintenance_devices = Device.objects.filter(status='maintenance').count()
+    critical_alerts = Device.objects.filter(
+        next_maintenance__isnull=False
+    ).filter(
+        Q(next_maintenance__lt=today) |
+        Q(next_maintenance__lte=today + timedelta(days=3))
+    ).count()
+    return render(request, 'partials/stats_strip.html', {
+        'active_devices': active_devices,
+        'maintenance_devices': maintenance_devices,
+        'critical_alerts': critical_alerts,
+    })
+
+
+@require_GET
+@login_required
+def htmx_todays_maintenance(request):
+    today = timezone.now().date()
+    todays_maintenance = Maintenance.objects.select_related('device').filter(
+        date=today
+    ).order_by('-created_at')[:10]
+    return render(request, 'partials/todays_maintenance.html', {
+        'todays_maintenance': todays_maintenance,
+    })
+
+
+@require_GET
+@login_required
+def htmx_critical_zone(request):
+    from datetime import date
+    today = date.today()
+    overdue = []
+    for device in Device.objects.filter(next_maintenance__isnull=False):
+        if device.next_maintenance and device.next_maintenance < today:
+            delta = today - device.next_maintenance
+            overdue.append({
+                'name': device.name,
+                'device_id': device.device_id,
+                'days_overdue': delta.days,
+                'next_maintenance': device.next_maintenance,
+            })
+    overdue.sort(key=lambda x: x['days_overdue'], reverse=True)
+    return render(request, 'partials/critical_zone.html', {
+        'overdue_maintenance': overdue[:5],
+    })
+
+
+@login_required
+def team_profile(request):
+    return redirect('dashboard')
+
+
 @require_GET
 def healthz(request):
     """Liveness probe for Docker / load-balancer healthchecks.
