@@ -1,16 +1,31 @@
-# hospital_system/asgi.py
-"""
-ASGI config for hospital_system project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
-"""
 import os
-
-from django.core.asgi import get_asgi_application
+from importlib.util import find_spec
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hospital_system.settings')
 
-application = get_asgi_application()
+if find_spec('channels') is not None:
+    import django
+    from django.core.asgi import get_asgi_application
+
+    django.setup()
+
+    from channels.routing import ProtocolTypeRouter, URLRouter
+    from channels.auth import AuthMiddlewareStack
+    from channels.security.websocket import AllowedHostsOriginValidator
+    from django.urls import path
+    from devices.consumers import DeviceStatusConsumer
+
+    application = ProtocolTypeRouter({
+        'http': get_asgi_application(),
+        'websocket': AllowedHostsOriginValidator(
+            AuthMiddlewareStack(
+                URLRouter([
+                    path('ws/device-status/', DeviceStatusConsumer.as_asgi()),
+                ])
+            )
+        ),
+    })
+else:
+    from django.core.asgi import get_asgi_application
+
+    application = get_asgi_application()

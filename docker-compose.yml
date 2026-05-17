@@ -1,4 +1,13 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -17,7 +26,7 @@ services:
   web:
     build: .
     restart: unless-stopped
-    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn hospital_system.wsgi:application --workers 2 --bind 0.0.0.0:8000 --timeout 120 --access-logfile - --error-logfile -"
+    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p 8000 hospital_system.asgi:application"
     ports:
       - "8000:8000"
     volumes:
@@ -38,7 +47,11 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-changeme}
       DB_HOST: db
       DB_PORT: 5432
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
     depends_on:
+      redis:
+        condition: service_healthy
       db:
         condition: service_healthy
     healthcheck:
