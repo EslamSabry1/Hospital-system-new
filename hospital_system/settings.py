@@ -22,12 +22,21 @@ BASE_URL = config('BASE_URL', default=f'http://{LOCAL_IP}:8000')
 OPTIONAL_INSTALLED_APPS = [
     'daphne',
     'rest_framework',
+    'rest_framework.authtoken',
     'django_filters',
 ]
 
+
+def optional_app_available(app):
+    try:
+        return find_spec(app) is not None
+    except ModuleNotFoundError:
+        return False
+
+
 INSTALLED_APPS = [
     app for app in OPTIONAL_INSTALLED_APPS
-    if find_spec(app) is not None
+    if optional_app_available(app)
 ] + [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -42,6 +51,7 @@ INSTALLED_APPS = [
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],

@@ -22,6 +22,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Custom CSS -->
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0e7490">
     <link rel="stylesheet" href="/static/css/style.css">
 
     {% block extra_css %}{% endblock %}
@@ -739,6 +741,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/service-worker.js', { scope: '/' }).catch(function(error) {
+            console.warn('Service worker registration failed:', error);
+        });
+    });
+}
 </script>
 
 {% block extra_js %}{% endblock %}

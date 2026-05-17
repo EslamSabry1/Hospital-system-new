@@ -1,0 +1,31 @@
+<section class="health-section">
+  <div class="health-header">
+    <div>
+      <h2 class="health-title"><i class="bi bi-heart-pulse-fill me-2"></i> System Health</h2>
+      <div class="health-subtitle">Live health score based on device operational status</div>
+    </div>
+    <div class="health-pill" id="healthPill"><span class="dot" id="healthDot"></span><span class="label" id="healthLabel">Loading…</span></div>
+  </div>
+  <div class="health-grid">
+    <div class="health-card health-card--ring"><div class="health-ring-wrap"><div class="health-ring"><svg viewBox="0 0 240 240" aria-label="System health ring"><defs><filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><circle class="ring-background" cx="120" cy="120" r="96"></circle><circle class="ring-progress" cx="120" cy="120" r="96" data-percentage="{{ system_health }}"></circle></svg><div class="health-center"><div class="health-percent" id="healthPercentText">{{ system_health|floatformat:0 }}%</div><div class="health-caption">Overall Score</div></div></div><div class="health-scale"><span>0</span><span>50</span><span>100</span></div><div class="health-meter"><div class="meter-track"><div class="meter-fill" id="healthMeterFill"></div></div><div class="meter-labels"><span class="good">Good</span><span class="warn">Warning</span><span class="crit">Critical</span></div></div></div></div>
+    <div class="health-card health-card--stats"><div class="health-stats"><div class="health-stat"><div class="stat-icon"><i class="bi bi-clock-history"></i></div><div class="stat-meta"><div class="stat-title">Mean Downtime</div><div class="stat-value">{{ mean_downtime }}</div><div class="stat-hint">Average device unavailability</div></div></div><div class="health-stat"><div class="stat-icon"><i class="bi bi-wrench-adjustable-circle"></i></div><div class="stat-meta"><div class="stat-title">Avg. Repair Time</div><div class="stat-value">{{ avg_repair_time }}</div><div class="stat-hint">Mean time to restore service</div></div></div><div class="health-stat"><div class="stat-icon"><i class="bi bi-cpu-fill"></i></div><div class="stat-meta"><div class="stat-title">Total Devices</div><div class="stat-value">{{ total_devices }}</div><div class="stat-hint">Registered equipment</div></div></div></div></div>
+  </div>
+</section>
+
+<div class="recent-maintenance-section">
+  <h3><i class="bi bi-clock-history"></i> Recent Maintenance Activity</h3>
+  <div class="maintenance-list">
+    {% for maintenance in recent_maintenance %}
+    <div class="maintenance-item">
+      <div class="maintenance-icon"><i class="bi bi-tools"></i></div>
+      <div class="maintenance-details">
+        <div class="maintenance-device">{{ maintenance.device.name }}</div>
+        <div class="maintenance-info"><span><i class="bi bi-person"></i> {{ maintenance.technician|default:"Technician" }}</span><span><i class="bi bi-tag"></i> {{ maintenance.get_maintenance_type_display }}</span><span><i class="bi bi-cash"></i> {{ currency_symbol|default:"EGP" }} {{ maintenance.cost }}</span></div>
+      </div>
+      <div class="maintenance-date">{{ maintenance.date|date:"M d, Y" }}</div>
+    </div>
+    {% empty %}
+    <div class="text-center py-4"><i class="bi bi-calendar-check display-6 text-muted"></i><p class="mt-3 text-muted">No recent maintenance records</p></div>
+    {% endfor %}
+  </div>
+</div>

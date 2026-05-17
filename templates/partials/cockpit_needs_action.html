@@ -1,0 +1,25 @@
+<section class="status-strip mt-0"
+         hx-get="{% url 'htmx_stats_strip' %}"
+         hx-trigger="load, every 60s"
+         hx-target="#stats-strip-container"
+         hx-swap="innerHTML">
+  <div id="stats-strip-container">
+    {% include 'partials/stats_strip.html' %}
+  </div>
+</section>
+
+{% if has_critical_alerts %}
+<section class="critical-zone"
+         hx-get="{% url 'htmx_critical_zone' %}"
+         hx-trigger="load, every 60s"
+         hx-target="#critical-zone-content"
+         hx-swap="innerHTML">
+  <div class="critical-header">
+    <h2><i class="bi bi-exclamation-triangle-fill"></i> Critical Attention Required</h2>
+    <button class="btn-alert" type="button" id="openIncidentBtn"><i class="bi bi-bell-fill"></i> View All Alerts</button>
+  </div>
+  <div id="critical-zone-content">
+    {% include 'partials/critical_zone.html' %}
+  </div>
+</section>
+{% endif %}

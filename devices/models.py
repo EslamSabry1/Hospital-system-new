@@ -282,21 +282,10 @@ class Maintenance(models.Model):
         self._broadcast_status_change()
 
     def _broadcast_status_change(self):
+        from .realtime import broadcast_device_status_change
+
         try:
-            from asgiref.sync import async_to_sync
-            from channels.layers import get_channel_layer
-            channel_layer = get_channel_layer()
-            if channel_layer:
-                async_to_sync(channel_layer.group_send)(
-                    'device_status',
-                    {
-                        'type': 'device_changed',
-                        'device_id': self.device.device_id,
-                        'device_name': self.device.name,
-                        'new_status': self.device.status,
-                        'maintenance_status': self.status,
-                    }
-                )
+            broadcast_device_status_change(self)
         except Exception:
             pass
 

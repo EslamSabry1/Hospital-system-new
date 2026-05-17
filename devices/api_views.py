@@ -4,13 +4,15 @@ from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.urls import reverse
 from rest_framework.views import APIView
-from .models import Device, Department, Maintenance, PMTemplate, MaintenanceTask
+from .models import Device, Department, Maintenance, TechnicianNote, PMTemplate, MaintenanceTask
+from .realtime import get_dashboard_stats_response, get_device_stats_payload
 from .serializers import (
     DeviceListSerializer, DeviceDetailSerializer,
     DepartmentSerializer, MaintenanceSerializer,
     PMTemplateSerializer, MaintenanceTaskSerializer,
-    DashboardStatsSerializer,
+    TechnicianNoteSerializer, DashboardStatsSerializer,
 )
 
 
@@ -87,6 +89,13 @@ class MaintenanceViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+class TechnicianNoteViewSet(viewsets.ModelViewSet):
+    queryset = TechnicianNote.objects.select_related('maintenance__device').order_by('-created_at')
+    serializer_class = TechnicianNoteSerializer
+    filterset_fields = ['maintenance', 'is_offline_created']
+    search_fields = ['body', 'maintenance__device__name', 'maintenance__device__device_id']
+
+
 class PMTemplateViewSet(viewsets.ModelViewSet):
     queryset = PMTemplate.objects.filter(is_active=True).order_by('device_type', 'name')
     serializer_class = PMTemplateSerializer
@@ -107,31 +116,41 @@ class MaintenanceTaskViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(task).data)
 
 
+class ControlCenterStatsAPIView(APIView):
+    def get(self, request):
+        return Response(get_dashboard_stats_response())
+
+
+class DeviceLookupAPIView(APIView):
+    def get(self, request):
+        device_id = (request.query_params.get('device_id') or '').strip()
+        if not device_id:
+            return Response({'ok': False, 'error': 'device_id is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        device = Device.objects.filter(device_id__iexact=device_id).first()
+        if not device:
+            return Response({'ok': False, 'error': 'Device not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            'ok': True,
+            'pk': device.pk,
+            'url': reverse('device_detail', kwargs={'pk': device.pk}),
+        })
+
+
 class DashboardStatsAPIView(APIView):
     def get(self, request):
-        today = date.today()
-        total = Device.objects.count()
-        active = Device.objects.filter(status='active').count()
-        maintenance = Device.objects.filter(status='maintenance').count()
-        inactive = Device.objects.filter(status='inactive').count()
-        overdue_qs = Device.objects.filter(
-            next_maintenance__isnull=False,
-            next_maintenance__lt=today
-        )
-        critical = Device.objects.filter(
-            next_maintenance__isnull=False
-        ).filter(
-            Q(next_maintenance__lt=today) |
-            Q(next_maintenance__lte=today + timedelta(days=3))
-        ).count()
-        health = round((active / total) * 100, 1) if total else 0
+        stats = get_device_stats_payload()
         data = {
-            'total_devices': total,
-            'active_devices': active,
-            'maintenance_devices': maintenance,
-            'inactive_devices': inactive,
-            'critical_alerts': critical,
-            'system_health': health,
-            'overdue_count': overdue_qs.count(),
+            'total_devices': stats['total_devices'],
+            'active_devices': stats['active_devices'],
+            'maintenance_devices': stats['maintenance_devices'],
+            'inactive_devices': stats['inactive_devices'],
+            'critical_alerts': stats['critical_alerts'],
+            'system_health': stats['system_health'],
+            'overdue_count': Device.objects.filter(
+                next_maintenance__isnull=False,
+                next_maintenance__lt=date.today(),
+            ).count(),
         }
         return Response(DashboardStatsSerializer(data).data)

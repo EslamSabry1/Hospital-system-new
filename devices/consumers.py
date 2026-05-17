@@ -1,13 +1,13 @@
 import json
+
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from django.utils import timezone
-from datetime import date, timedelta
-from django.db.models import Q
+
+from .realtime import DEVICES_BROADCAST_GROUP, get_device_stats_payload
 
 
 class DeviceStatusConsumer(AsyncWebsocketConsumer):
-    GROUP_NAME = 'device_status'
+    GROUP_NAME = DEVICES_BROADCAST_GROUP
 
     async def connect(self):
         if not self.scope['user'].is_authenticated:
@@ -35,23 +35,4 @@ class DeviceStatusConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_stats(self):
-        from .models import Device
-        today = date.today()
-        total = Device.objects.count()
-        active = Device.objects.filter(status='active').count()
-        maintenance = Device.objects.filter(status='maintenance').count()
-        critical = Device.objects.filter(
-            next_maintenance__isnull=False
-        ).filter(
-            Q(next_maintenance__lt=today) |
-            Q(next_maintenance__lte=today + timedelta(days=3))
-        ).count()
-        health = round((active / total) * 100, 1) if total else 0
-        return {
-            'total_devices': total,
-            'active_devices': active,
-            'maintenance_devices': maintenance,
-            'critical_alerts': critical,
-            'system_health': health,
-            'timestamp': timezone.now().isoformat(),
-        }
+        return get_device_stats_payload()

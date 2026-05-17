@@ -1,0 +1,25 @@
+{
+  "name": "DeviceCare Technician Workbench",
+  "short_name": "DeviceCare",
+  "description": "Installable technician workbench for hospital device maintenance.",
+  "start_url": "/technician/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#0e7490",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/img/hti_logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

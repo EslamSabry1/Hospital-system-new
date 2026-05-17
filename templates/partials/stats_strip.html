@@ -2,17 +2,17 @@
     <div class="status-card normal">
         <div class="status-indicator"></div>
         <span class="status-text">Devices Running Normally</span>
-        <span class="status-count">{{ active_devices }}</span>
+        <span class="status-count" id="normal-count">{{ active_devices }}</span>
     </div>
     <div class="status-card warning">
         <div class="status-indicator"></div>
         <span class="status-text">Pending Maintenance</span>
-        <span class="status-count">{{ maintenance_devices }}</span>
+        <span class="status-count" id="warning-count">{{ maintenance_devices }}</span>
     </div>
     <div class="status-card critical">
         <div class="status-indicator"></div>
         <span class="status-text">Critical Failures</span>
-        <span class="status-count">{{ critical_alerts }}</span>
+        <span class="status-count" id="critical-count">{{ critical_alerts }}</span>
     </div>
 </div>
 <small class="update-info">Last updated: {% now "H:i:s" %}</small>

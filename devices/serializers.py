@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Device, Department, Maintenance, PMTemplate, MaintenanceTask
+from .models import Device, Department, Maintenance, TechnicianNote, PMTemplate, MaintenanceTask
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -76,6 +76,18 @@ class MaintenanceSerializer(serializers.ModelSerializer):
             'technician_signature', 'created_at',
         ]
         read_only_fields = ['created_at', 'is_sla_breached']
+
+
+class TechnicianNoteSerializer(serializers.ModelSerializer):
+    maintenance_device_name = serializers.CharField(source='maintenance.device.name', read_only=True)
+
+    class Meta:
+        model = TechnicianNote
+        fields = [
+            'id', 'maintenance', 'maintenance_device_name', 'body',
+            'is_offline_created', 'synced_at', 'created_at',
+        ]
+        read_only_fields = ['created_at']
 
 
 class PMTemplateSerializer(serializers.ModelSerializer):

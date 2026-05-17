@@ -1,0 +1,22 @@
+<section class="shortcuts-grid">
+  <h2 class="section-title"><i class="bi bi-lightning-charge"></i> Quick Actions</h2>
+  <div class="grid-container">
+    <div class="shortcut-card" data-action="add-device"><div class="card-icon"><i class="bi bi-plus-circle-fill"></i></div><h3>Add New Device</h3><p>Register new medical equipment</p></div>
+    <div class="shortcut-card" data-action="maintenance"><div class="card-icon"><i class="bi bi-tools"></i></div><h3>Maintenance Center</h3><p>Schedule and track repairs</p></div>
+    <div class="shortcut-card" data-action="qr-scanner"><div class="card-icon"><i class="bi bi-qr-code-scan"></i></div><h3>Scan QR Code</h3><p>Quick device access</p></div>
+    <div class="shortcut-card" data-action="departments"><div class="card-icon"><i class="bi bi-building"></i></div><h3>Departments</h3><p>Department-wise view</p></div>
+    <div class="shortcut-card" data-action="reports"><div class="card-icon"><i class="bi bi-graph-up"></i></div><h3>Reports</h3><p>Generate analytics</p></div>
+    <div class="shortcut-card" data-action="settings"><div class="card-icon"><i class="bi bi-gear-fill"></i></div><h3>System Settings</h3><p>Configure preferences</p></div>
+  </div>
+</section>
+
+<div class="recent-maintenance-section"
+     hx-get="{% url 'htmx_todays_maintenance' %}"
+     hx-trigger="load, every 60s"
+     hx-target="#todays-maintenance-container"
+     hx-swap="innerHTML">
+  <h3><i class="bi bi-list-check"></i> Today's Maintenance Queue ({{ devices_due_today }} due)</h3>
+  <div id="todays-maintenance-container">
+    {% include 'partials/todays_maintenance.html' %}
+  </div>
+</div>

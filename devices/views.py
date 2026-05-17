@@ -1,13 +1,14 @@
 # devices/views.py
 from datetime import date, timedelta
 
+from django.conf import settings
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout
 from django.contrib.auth import get_user_model
 from django.contrib import messages
 from django.db.models import Count, Avg, Sum, Q
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.db import connection
 from django.utils import timezone
 from django.views.decorators.http import require_GET
@@ -915,10 +916,80 @@ def htmx_critical_zone(request):
         'overdue_maintenance': overdue[:5],
     })
 
+@require_GET
+@login_required
+def htmx_cockpit_needs_action(request):
+    today = date.today()
+    active_devices = Device.objects.filter(status='active').count()
+    maintenance_devices = Device.objects.filter(status='maintenance').count()
+    overdue_maintenance = []
+    critical_alerts = 0
+    for device in Device.objects.filter(next_maintenance__isnull=False):
+        delta = device.next_maintenance - today
+        if delta.days < 0:
+            critical_alerts += 1
+            overdue_maintenance.append({
+                'name': device.name,
+                'device_id': device.device_id,
+                'days_overdue': abs(delta.days),
+                'next_maintenance': device.next_maintenance,
+            })
+        elif delta.days <= 3:
+            critical_alerts += 1
+    overdue_maintenance.sort(key=lambda item: item['days_overdue'], reverse=True)
+    return render(request, 'partials/cockpit_needs_action.html', {
+        'active_devices': active_devices,
+        'maintenance_devices': maintenance_devices,
+        'critical_alerts': critical_alerts,
+        'overdue_maintenance': overdue_maintenance[:5],
+        'has_critical_alerts': critical_alerts > 0,
+    })
+
+
+@require_GET
+@login_required
+def htmx_cockpit_todays_work(request):
+    today = timezone.now().date()
+    todays_maintenance = Maintenance.objects.select_related('device').filter(
+        date=today
+    ).order_by('-created_at')[:10]
+    devices_due_today = Device.objects.filter(next_maintenance=today).count()
+    return render(request, 'partials/cockpit_todays_work.html', {
+        'todays_maintenance': todays_maintenance,
+        'devices_due_today': devices_due_today,
+    })
+
+
+@require_GET
+@login_required
+def htmx_cockpit_trends(request):
+    total_devices = Device.objects.count()
+    active_devices = Device.objects.filter(status='active').count()
+    system_health = round((active_devices / total_devices) * 100, 1) if total_devices else 0
+    recent_maintenance = Maintenance.objects.select_related('device').order_by('-date')[:5]
+    return render(request, 'partials/cockpit_trends.html', {
+        'total_devices': total_devices,
+        'system_health': system_health,
+        'mean_downtime': '2.3 hours',
+        'avg_repair_time': '4.7 hours',
+        'recent_maintenance': recent_maintenance,
+    })
+
 
 @login_required
 def team_profile(request):
     return redirect('dashboard')
+
+
+
+@require_GET
+def service_worker(request):
+    response = FileResponse(
+        open(settings.BASE_DIR / 'static' / 'service-worker.js', 'rb'),
+        content_type='application/javascript',
+    )
+    response['Service-Worker-Allowed'] = '/'
+    return response
 
 
 @require_GET
