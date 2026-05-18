@@ -19,6 +19,7 @@ HOTSPOT_URL = f'http://{HOTSPOT_IP}:8000'
 BASE_URL = config('BASE_URL', default=f'http://{LOCAL_IP}:8000')
 
 # ── Application definition ───────────────────────────────────────────────────
+# daphne must be first in INSTALLED_APPS when channels is available
 OPTIONAL_INSTALLED_APPS = [
     'daphne',
     'rest_framework',
@@ -161,7 +162,8 @@ CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
+# FIX W5: Direct to control_center — avoids the dashboard→control_center double redirect
+LOGIN_REDIRECT_URL = 'control_center'
 LOGOUT_REDIRECT_URL = 'login'
 
 # ── Sessions ──────────────────────────────────────────────────────────────────

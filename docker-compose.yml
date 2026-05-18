@@ -26,6 +26,8 @@ services:
   web:
     build: .
     restart: unless-stopped
+    # FIX E8: Use daphne (ASGI) instead of gunicorn (WSGI) to support WebSocket connections.
+    # Gunicorn cannot handle the ws:// protocol — WebSocket connections would be silently dropped.
     command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p 8000 hospital_system.asgi:application"
     ports:
       - "8000:8000"

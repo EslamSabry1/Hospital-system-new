@@ -1,13 +1,19 @@
 # devices/models.py
+import logging
+from decimal import Decimal
+
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files import File
 from django.db import models
+from django.urls import reverse
+from django.utils import timezone
+
 import qrcode
 from io import BytesIO
-from django.core.files import File
-from django.utils import timezone
-from django.urls import reverse
-from django.conf import settings
-from decimal import Decimal
+
+logger = logging.getLogger(__name__)
+
 
 class Department(models.Model):
     name = models.CharField(max_length=200, verbose_name='Department Name')
@@ -20,6 +26,7 @@ class Department(models.Model):
 
     def __str__(self):
         return f"{self.name} - Floor {self.floor}"
+
 
 class Device(models.Model):
     DEVICE_STATUS = [
@@ -49,7 +56,9 @@ class Device(models.Model):
     warranty_expiry = models.DateField(verbose_name='Warranty Expiry')
     price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Price')
     status = models.CharField(max_length=20, choices=DEVICE_STATUS, default='active', verbose_name='Status')
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Department')
+    department = models.ForeignKey(
+        Department, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Department'
+    )
     location = models.CharField(max_length=200, verbose_name='Location')
     last_maintenance = models.DateField(null=True, blank=True, verbose_name='Last Maintenance')
     next_maintenance = models.DateField(null=True, blank=True, verbose_name='Next Maintenance')
@@ -76,13 +85,12 @@ class Device(models.Model):
             'active': 'success',
             'inactive': 'secondary',
             'maintenance': 'warning',
-            'retired': 'danger'
+            'retired': 'danger',
         }
         return colors.get(self.status, 'secondary')
 
     def generate_qr_code(self):
         device_url = settings.BASE_URL + self.get_absolute_url()
-
         qr = qrcode.QRCode(
             version=1,
             error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -91,39 +99,35 @@ class Device(models.Model):
         )
         qr.add_data(device_url)
         qr.make(fit=True)
-
         img = qr.make_image(fill_color="black", back_color="white")
-
         buffer = BytesIO()
         img.save(buffer, format='PNG')
         buffer.seek(0)
-
         filename = f'qr_{self.device_id}_{self.id}.png'
         self.qr_code.save(filename, File(buffer), save=False)
 
     def save(self, *args, **kwargs):
+        # FIX W8: Only call super().save() once — generate QR in a separate save
+        # only when creating a new record without a QR code.
+        is_new = self.pk is None
         super().save(*args, **kwargs)
-
-        if not self.qr_code:
-            self.generate_qr_code()
-            kwargs.pop('force_insert', None)
-            super().save(*args, **kwargs)
+        if is_new and not self.qr_code:
+            try:
+                self.generate_qr_code()
+                # Use update_fields to avoid re-triggering full save logic
+                Device.objects.filter(pk=self.pk).update(qr_code=self.qr_code)
+            except Exception:
+                logger.warning("QR code generation failed for device %s", self.device_id, exc_info=True)
 
     def sync_status_with_open_work_orders(self, save=True):
-        """Keep the device status aligned with current maintenance work order state."""
         if self.status == 'retired':
             return self.status
-
-        has_open_work_order = self.maintenances.filter(
-            status__in=self.AUTO_INACTIVE_MAINTENANCE_STATUSES
-        ).exists()
-
-        target_status = 'inactive' if has_open_work_order else 'active'
-        if self.status != target_status:
-            self.status = target_status
+        has_open = self.maintenances.filter(status__in=self.AUTO_INACTIVE_MAINTENANCE_STATUSES).exists()
+        target = 'inactive' if has_open else 'active'
+        if self.status != target:
+            self.status = target
             if save:
                 self.save(update_fields=['status', 'updated_at'])
-
         return self.status
 
     @property
@@ -132,8 +136,7 @@ class Device(models.Model):
 
     @property
     def total_cost_of_ownership(self):
-        base_price = Decimal(str(self.price or '0'))
-        return base_price + self.total_maintenance_cost
+        return Decimal(str(self.price or '0')) + self.total_maintenance_cost
 
     @property
     def age_in_years(self):
@@ -143,11 +146,13 @@ class Device(models.Model):
 
     @property
     def replacement_recommendation_score(self):
-        """Score from 0-100. Higher means stronger replacement recommendation."""
         today = timezone.now().date()
         warranty_factor = 25 if self.warranty_expiry and self.warranty_expiry < today else 0
         price_value = Decimal(str(self.price or '0'))
-        maintenance_factor = min(int(float(self.total_maintenance_cost / (price_value or 1)) * 40), 40) if price_value else 40
+        maintenance_factor = (
+            min(int(float(self.total_maintenance_cost / price_value) * 40), 40)
+            if price_value else 40
+        )
         age_factor = min(int((self.age_in_years / 10) * 25), 25)
         status_factor = 10 if self.status in {'maintenance', 'inactive'} else 0
         return min(warranty_factor + maintenance_factor + age_factor + status_factor, 100)
@@ -182,6 +187,7 @@ class Device(models.Model):
         days = self.days_until_maintenance
         return abs(days) if days is not None and days < 0 else 0
 
+
 class Maintenance(models.Model):
     MAINTENANCE_TYPE = [
         ('preventive', 'Preventive Maintenance'),
@@ -208,7 +214,9 @@ class Maintenance(models.Model):
         'verified': 5,
     }
 
-    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='maintenances', verbose_name='Device')
+    device = models.ForeignKey(
+        Device, on_delete=models.CASCADE, related_name='maintenances', verbose_name='Device'
+    )
     maintenance_type = models.CharField(max_length=20, choices=MAINTENANCE_TYPE, verbose_name='Maintenance Type')
     date = models.DateField(default=timezone.now, verbose_name='Maintenance Date')
     technician = models.CharField(max_length=200, verbose_name='Technician')
@@ -216,13 +224,19 @@ class Maintenance(models.Model):
     cost = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Cost')
     description = models.TextField(verbose_name='Work Description')
     notes = models.TextField(blank=True, verbose_name='Notes')
-    status = models.CharField(max_length=20, choices=WORK_ORDER_STATUS, default='new', verbose_name='Work Order Status')
+    status = models.CharField(
+        max_length=20, choices=WORK_ORDER_STATUS, default='new', verbose_name='Work Order Status'
+    )
     sla_deadline = models.DateTimeField(null=True, blank=True, verbose_name='SLA Deadline')
-    photo_attachment = models.FileField(upload_to='maintenance/photos/', null=True, blank=True, verbose_name='Photo Attachment')
+    photo_attachment = models.FileField(
+        upload_to='maintenance/photos/', null=True, blank=True, verbose_name='Photo Attachment'
+    )
     technician_signature = models.CharField(max_length=200, blank=True, verbose_name='Technician Signature')
     started_at = models.DateTimeField(null=True, blank=True, verbose_name='Started At')
     stopped_at = models.DateTimeField(null=True, blank=True, verbose_name='Stopped At')
-    calibration_certificate = models.FileField(upload_to='maintenance/calibration/', null=True, blank=True, verbose_name='Calibration Certificate')
+    calibration_certificate = models.FileField(
+        upload_to='maintenance/calibration/', null=True, blank=True, verbose_name='Calibration Certificate'
+    )
     completed = models.BooleanField(default=True, verbose_name='Completed')
     next_maintenance_date = models.DateField(blank=True, null=True, verbose_name='Next Maintenance Date')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -254,22 +268,13 @@ class Maintenance(models.Model):
         return Maintenance.objects.filter(pk=self.pk).values_list('status', flat=True).first()
 
     def validate_status_transition(self, previous_status=None):
-        """Validate state transitions without relying on model.clean().
-
-        New work orders may be created in any valid status. Existing work orders
-        can move forward or remain unchanged, but they cannot move backwards.
-        Unknown statuses are ignored here because field choice validation reports
-        them more accurately during full_clean().
-        """
         previous_status = self.get_persisted_status() if previous_status is None else previous_status
         if not previous_status:
             return
-
         previous_rank = self.status_rank(previous_status)
         current_rank = self.status_rank(self.status)
         if previous_rank is None or current_rank is None:
             return
-
         if current_rank < previous_rank:
             raise ValidationError({'status': 'Status cannot move backwards in the work order flow.'})
 
@@ -282,6 +287,7 @@ class Maintenance(models.Model):
         self._broadcast_status_change()
 
     def _broadcast_status_change(self):
+        # FIX W7: Log failures instead of silently swallowing them
         try:
             from asgiref.sync import async_to_sync
             from channels.layers import get_channel_layer
@@ -298,7 +304,12 @@ class Maintenance(models.Model):
                     }
                 )
         except Exception:
-            pass
+            logger.warning(
+                "WebSocket broadcast failed for device %s (WO %s)",
+                self.device.device_id,
+                self.pk,
+                exc_info=True,
+            )
 
     def delete(self, *args, **kwargs):
         device = self.device
@@ -307,7 +318,9 @@ class Maintenance(models.Model):
 
 
 class TechnicianNote(models.Model):
-    maintenance = models.ForeignKey(Maintenance, on_delete=models.CASCADE, related_name='technician_notes')
+    maintenance = models.ForeignKey(
+        Maintenance, on_delete=models.CASCADE, related_name='technician_notes'
+    )
     body = models.TextField()
     is_offline_created = models.BooleanField(default=False)
     synced_at = models.DateTimeField(null=True, blank=True)
@@ -383,10 +396,8 @@ class MaintenanceTask(models.Model):
     def refresh_status(self, reference_date=None):
         if self.status in {'completed', 'cancelled'}:
             return
-
         today = reference_date or timezone.now().date()
         delta = (self.due_date - today).days
-
         if delta < 0:
             self.status = 'overdue'
             self.urgency = 'overdue'
